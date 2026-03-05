@@ -1,0 +1,281 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620
+  response:
+    body:
+      string: '{"object":"card","id":"4e2fe951-4820-4555-8cee-621c66ed8620","oracle_id":"d683d985-9888-4d21-8b5f-69e69ce4a03b","multiverse_ids":[],"tcgplayer_id":259231,"cardmarket_id":657769,"name":"Path
+        to Exile","lang":"en","released_at":"2021-11-29","uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620","scryfall_uri":"https://scryfall.com/card/sld/226/path-to-exile?utm_source=api","layout":"normal","highres_image":true,"image_status":"highres_scan","image_uris":{"small":"https://cards.scryfall.io/small/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","normal":"https://cards.scryfall.io/normal/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","large":"https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","png":"https://cards.scryfall.io/png/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.png?1682692836","art_crop":"https://cards.scryfall.io/art_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","border_crop":"https://cards.scryfall.io/border_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836"},"mana_cost":"{W}","cmc":1.0,"type_line":"Instant","oracle_text":"Exile
+        target creature. Its controller may search their library for a basic land
+        card, put that card onto the battlefield tapped, then shuffle.","colors":["W"],"color_identity":["W"],"keywords":[],"legalities":{"standard":"not_legal","future":"not_legal","historic":"legal","timeless":"legal","gladiator":"legal","pioneer":"not_legal","modern":"legal","legacy":"legal","pauper":"not_legal","vintage":"legal","penny":"not_legal","commander":"legal","oathbreaker":"legal","standardbrawl":"not_legal","brawl":"legal","alchemy":"not_legal","paupercommander":"not_legal","duel":"legal","oldschool":"not_legal","premodern":"not_legal","predh":"legal"},"games":["paper"],"reserved":false,"game_changer":false,"foil":true,"nonfoil":true,"finishes":["nonfoil","foil"],"oversized":false,"promo":false,"reprint":true,"variation":false,"set_id":"4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set":"sld","set_name":"Secret
+        Lair Drop","set_type":"box","set_uri":"https://api.scryfall.com/sets/4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set_search_uri":"https://api.scryfall.com/cards/search?order=set&q=e%3Asld&unique=prints","scryfall_set_uri":"https://scryfall.com/sets/sld?utm_source=api","rulings_uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620/rulings","prints_search_uri":"https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ad683d985-9888-4d21-8b5f-69e69ce4a03b&unique=prints","collector_number":"226","digital":false,"rarity":"rare","card_back_id":"0aeebaf5-8c7d-4636-9e82-8c27447861f7","artist":"Marija
+        Tiurina","artist_ids":["1b60443a-1282-433d-8a20-35f0992cf6a0"],"illustration_id":"c1f7db87-f102-46cd-8f0a-810ddec320dc","border_color":"borderless","frame":"2015","frame_effects":["inverted"],"security_stamp":"oval","full_art":true,"textless":false,"booster":false,"story_spotlight":false,"edhrec_rank":15,"penny_rank":5,"prices":{"usd":"15.27","usd_foil":"16.60","usd_etched":null,"eur":"8.28","eur_foil":"9.31","tix":null},"related_uris":{"tcgplayer_infinite_articles":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","tcgplayer_infinite_decks":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","edhrec":"https://edhrec.com/route/?cc=Path+to+Exile"},"purchase_uris":{"tcgplayer":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F259231%3Fpage%3D1","cardmarket":"https://www.cardmarket.com/en/Magic/Products?idProduct=657769&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall","cardhoarder":"https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Path+to+Exile&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"}}'
+    headers:
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '8305'
+      CF-RAY:
+      - 9d76185d697e3126-IAD
+      Cache-Control:
+      - public, max-age=57600
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 05 Mar 2026 03:39:43 GMT
+      Server:
+      - cloudflare
+      access-control-allow-headers:
+      - Accept, Accept-Charset, Accept-Language, Authorization, Cache-Control, Content-Language,
+        Content-Type, DNT, Host, If-Modified-Since, Keep-Alive, Origin, Referer, User-Agent,
+        X-Requested-With
+      access-control-allow-methods:
+      - GET, POST, DELETE, OPTIONS
+      access-control-allow-origin:
+      - '*'
+      access-control-max-age:
+      - '300'
+      cf-cache-status:
+      - HIT
+      content-disposition:
+      - inline
+      content-length:
+      - '4178'
+      content-transfer-encoding:
+      - binary
+      etag:
+      - W/"17264f7f865fcc13cb39e83f027bb625"
+      nel:
+      - '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      report-to:
+      - '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D\u0026sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6\u0026ts=1772445109"}],"max_age":3600}'
+      reporting-endpoints:
+      - heroku-nel="https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D&sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6&ts=1772445109"
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept,Accept-Encoding
+      via:
+      - 2.0 heroku-router
+      x-action-cache:
+      - MISS
+      x-content-type-options:
+      - nosniff
+      x-download-options:
+      - noopen
+      x-frame-options:
+      - DENY
+      x-permitted-cross-domain-policies:
+      - none
+      x-robots-tag:
+      - none
+      x-scryfall-card:
+      - https://scryfall.com/card/sld/226/path-to-exile?utm_source=api
+      x-scryfall-card-image:
+      - https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620
+  response:
+    body:
+      string: '{"object":"card","id":"4e2fe951-4820-4555-8cee-621c66ed8620","oracle_id":"d683d985-9888-4d21-8b5f-69e69ce4a03b","multiverse_ids":[],"tcgplayer_id":259231,"cardmarket_id":657769,"name":"Path
+        to Exile","lang":"en","released_at":"2021-11-29","uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620","scryfall_uri":"https://scryfall.com/card/sld/226/path-to-exile?utm_source=api","layout":"normal","highres_image":true,"image_status":"highres_scan","image_uris":{"small":"https://cards.scryfall.io/small/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","normal":"https://cards.scryfall.io/normal/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","large":"https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","png":"https://cards.scryfall.io/png/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.png?1682692836","art_crop":"https://cards.scryfall.io/art_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","border_crop":"https://cards.scryfall.io/border_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836"},"mana_cost":"{W}","cmc":1.0,"type_line":"Instant","oracle_text":"Exile
+        target creature. Its controller may search their library for a basic land
+        card, put that card onto the battlefield tapped, then shuffle.","colors":["W"],"color_identity":["W"],"keywords":[],"legalities":{"standard":"not_legal","future":"not_legal","historic":"legal","timeless":"legal","gladiator":"legal","pioneer":"not_legal","modern":"legal","legacy":"legal","pauper":"not_legal","vintage":"legal","penny":"not_legal","commander":"legal","oathbreaker":"legal","standardbrawl":"not_legal","brawl":"legal","alchemy":"not_legal","paupercommander":"not_legal","duel":"legal","oldschool":"not_legal","premodern":"not_legal","predh":"legal"},"games":["paper"],"reserved":false,"game_changer":false,"foil":true,"nonfoil":true,"finishes":["nonfoil","foil"],"oversized":false,"promo":false,"reprint":true,"variation":false,"set_id":"4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set":"sld","set_name":"Secret
+        Lair Drop","set_type":"box","set_uri":"https://api.scryfall.com/sets/4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set_search_uri":"https://api.scryfall.com/cards/search?order=set&q=e%3Asld&unique=prints","scryfall_set_uri":"https://scryfall.com/sets/sld?utm_source=api","rulings_uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620/rulings","prints_search_uri":"https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ad683d985-9888-4d21-8b5f-69e69ce4a03b&unique=prints","collector_number":"226","digital":false,"rarity":"rare","card_back_id":"0aeebaf5-8c7d-4636-9e82-8c27447861f7","artist":"Marija
+        Tiurina","artist_ids":["1b60443a-1282-433d-8a20-35f0992cf6a0"],"illustration_id":"c1f7db87-f102-46cd-8f0a-810ddec320dc","border_color":"borderless","frame":"2015","frame_effects":["inverted"],"security_stamp":"oval","full_art":true,"textless":false,"booster":false,"story_spotlight":false,"edhrec_rank":15,"penny_rank":5,"prices":{"usd":"15.27","usd_foil":"16.60","usd_etched":null,"eur":"8.28","eur_foil":"9.31","tix":null},"related_uris":{"tcgplayer_infinite_articles":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","tcgplayer_infinite_decks":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","edhrec":"https://edhrec.com/route/?cc=Path+to+Exile"},"purchase_uris":{"tcgplayer":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F259231%3Fpage%3D1","cardmarket":"https://www.cardmarket.com/en/Magic/Products?idProduct=657769&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall","cardhoarder":"https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Path+to+Exile&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"}}'
+    headers:
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '8305'
+      CF-RAY:
+      - 9d76185faf875839-ATL
+      Cache-Control:
+      - public, max-age=57600
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 05 Mar 2026 03:39:43 GMT
+      Server:
+      - cloudflare
+      access-control-allow-headers:
+      - Accept, Accept-Charset, Accept-Language, Authorization, Cache-Control, Content-Language,
+        Content-Type, DNT, Host, If-Modified-Since, Keep-Alive, Origin, Referer, User-Agent,
+        X-Requested-With
+      access-control-allow-methods:
+      - GET, POST, DELETE, OPTIONS
+      access-control-allow-origin:
+      - '*'
+      access-control-max-age:
+      - '300'
+      cf-cache-status:
+      - HIT
+      content-disposition:
+      - inline
+      content-length:
+      - '4178'
+      content-transfer-encoding:
+      - binary
+      etag:
+      - W/"17264f7f865fcc13cb39e83f027bb625"
+      nel:
+      - '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      report-to:
+      - '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D\u0026sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6\u0026ts=1772445109"}],"max_age":3600}'
+      reporting-endpoints:
+      - heroku-nel="https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D&sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6&ts=1772445109"
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept,Accept-Encoding
+      via:
+      - 2.0 heroku-router
+      x-action-cache:
+      - MISS
+      x-content-type-options:
+      - nosniff
+      x-download-options:
+      - noopen
+      x-frame-options:
+      - DENY
+      x-permitted-cross-domain-policies:
+      - none
+      x-robots-tag:
+      - none
+      x-scryfall-card:
+      - https://scryfall.com/card/sld/226/path-to-exile?utm_source=api
+      x-scryfall-card-image:
+      - https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.32.5
+    method: GET
+    uri: https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620
+  response:
+    body:
+      string: '{"object":"card","id":"4e2fe951-4820-4555-8cee-621c66ed8620","oracle_id":"d683d985-9888-4d21-8b5f-69e69ce4a03b","multiverse_ids":[],"tcgplayer_id":259231,"cardmarket_id":657769,"name":"Path
+        to Exile","lang":"en","released_at":"2021-11-29","uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620","scryfall_uri":"https://scryfall.com/card/sld/226/path-to-exile?utm_source=api","layout":"normal","highres_image":true,"image_status":"highres_scan","image_uris":{"small":"https://cards.scryfall.io/small/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","normal":"https://cards.scryfall.io/normal/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","large":"https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","png":"https://cards.scryfall.io/png/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.png?1682692836","art_crop":"https://cards.scryfall.io/art_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836","border_crop":"https://cards.scryfall.io/border_crop/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836"},"mana_cost":"{W}","cmc":1.0,"type_line":"Instant","oracle_text":"Exile
+        target creature. Its controller may search their library for a basic land
+        card, put that card onto the battlefield tapped, then shuffle.","colors":["W"],"color_identity":["W"],"keywords":[],"legalities":{"standard":"not_legal","future":"not_legal","historic":"legal","timeless":"legal","gladiator":"legal","pioneer":"not_legal","modern":"legal","legacy":"legal","pauper":"not_legal","vintage":"legal","penny":"not_legal","commander":"legal","oathbreaker":"legal","standardbrawl":"not_legal","brawl":"legal","alchemy":"not_legal","paupercommander":"not_legal","duel":"legal","oldschool":"not_legal","premodern":"not_legal","predh":"legal"},"games":["paper"],"reserved":false,"game_changer":false,"foil":true,"nonfoil":true,"finishes":["nonfoil","foil"],"oversized":false,"promo":false,"reprint":true,"variation":false,"set_id":"4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set":"sld","set_name":"Secret
+        Lair Drop","set_type":"box","set_uri":"https://api.scryfall.com/sets/4d92a8a7-ccb0-437d-abdc-9d70fc5ed672","set_search_uri":"https://api.scryfall.com/cards/search?order=set&q=e%3Asld&unique=prints","scryfall_set_uri":"https://scryfall.com/sets/sld?utm_source=api","rulings_uri":"https://api.scryfall.com/cards/4e2fe951-4820-4555-8cee-621c66ed8620/rulings","prints_search_uri":"https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ad683d985-9888-4d21-8b5f-69e69ce4a03b&unique=prints","collector_number":"226","digital":false,"rarity":"rare","card_back_id":"0aeebaf5-8c7d-4636-9e82-8c27447861f7","artist":"Marija
+        Tiurina","artist_ids":["1b60443a-1282-433d-8a20-35f0992cf6a0"],"illustration_id":"c1f7db87-f102-46cd-8f0a-810ddec320dc","border_color":"borderless","frame":"2015","frame_effects":["inverted"],"security_stamp":"oval","full_art":true,"textless":false,"booster":false,"story_spotlight":false,"edhrec_rank":15,"penny_rank":5,"prices":{"usd":"15.27","usd_foil":"16.60","usd_etched":null,"eur":"8.28","eur_foil":"9.31","tix":null},"related_uris":{"tcgplayer_infinite_articles":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","tcgplayer_infinite_decks":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DPath%2Bto%2BExile","edhrec":"https://edhrec.com/route/?cc=Path+to+Exile"},"purchase_uris":{"tcgplayer":"https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F259231%3Fpage%3D1","cardmarket":"https://www.cardmarket.com/en/Magic/Products?idProduct=657769&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall","cardhoarder":"https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Path+to+Exile&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"}}'
+    headers:
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '8306'
+      CF-RAY:
+      - 9d761861f9234909-ATL
+      Cache-Control:
+      - public, max-age=57600
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 05 Mar 2026 03:39:44 GMT
+      Server:
+      - cloudflare
+      access-control-allow-headers:
+      - Accept, Accept-Charset, Accept-Language, Authorization, Cache-Control, Content-Language,
+        Content-Type, DNT, Host, If-Modified-Since, Keep-Alive, Origin, Referer, User-Agent,
+        X-Requested-With
+      access-control-allow-methods:
+      - GET, POST, DELETE, OPTIONS
+      access-control-allow-origin:
+      - '*'
+      access-control-max-age:
+      - '300'
+      cf-cache-status:
+      - HIT
+      content-disposition:
+      - inline
+      content-length:
+      - '4178'
+      content-transfer-encoding:
+      - binary
+      etag:
+      - W/"17264f7f865fcc13cb39e83f027bb625"
+      nel:
+      - '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      report-to:
+      - '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D\u0026sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6\u0026ts=1772445109"}],"max_age":3600}'
+      reporting-endpoints:
+      - heroku-nel="https://nel.heroku.com/reports?s=pX1rdBAjk%2FqXgvKR5VQd9sASNVfjhRSBueqUhn7xc5g%3D&sid=929419e7-33ea-4e2f-85f0-7d8b7cd5cbd6&ts=1772445109"
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept,Accept-Encoding
+      via:
+      - 2.0 heroku-router
+      x-action-cache:
+      - MISS
+      x-content-type-options:
+      - nosniff
+      x-download-options:
+      - noopen
+      x-frame-options:
+      - DENY
+      x-permitted-cross-domain-policies:
+      - none
+      x-robots-tag:
+      - none
+      x-scryfall-card:
+      - https://scryfall.com/card/sld/226/path-to-exile?utm_source=api
+      x-scryfall-card-image:
+      - https://cards.scryfall.io/large/front/4/e/4e2fe951-4820-4555-8cee-621c66ed8620.jpg?1682692836
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

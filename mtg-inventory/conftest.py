@@ -56,6 +56,12 @@ def pytest_addoption(parser):
         default=False,
         help="record new VCR cassettes (real API calls)"
     )
+    
+    # Set VCR record mode based on flag
+    if '--record-cassettes' in os.sys.argv:
+        os.environ['VCR_RECORD_MODE'] = 'all'  # Record all interactions
+    elif 'VCR_RECORD_MODE' not in os.environ:
+        os.environ['VCR_RECORD_MODE'] = 'once'  # Default: use existing cassettes
 
 
 @pytest.fixture(scope="session")
