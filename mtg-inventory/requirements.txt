@@ -1,0 +1,7 @@
+Flask
+SQLAlchemy
+pandas
+qrcode
+pillow
+python-dotenv
+requests
