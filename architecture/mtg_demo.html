@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTG Inventory System — Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    margin-right: auto;
+  }
+
+  .nav-logo span { color: var(--accent); }
+
+  .tab-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 18px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .tab-btn:hover { color: var(--text); border-color: var(--border); }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  /* SCREENS */
+  .screen { display: none; padding: 40px 32px; max-width: 1100px; margin: 0 auto; }
+  .screen.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .screen-title {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+
+  .screen-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 32px;
+    font-family: var(--mono);
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* ===== SCREEN 1: CSV UPLOAD ===== */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(124,58,237,0.05);
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .upload-zone h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .upload-zone .browse {
+    color: var(--accent2);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* Progress */
+  .progress-wrap { margin-top: 20px; display: none; }
+  .progress-wrap.show { display: block; }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .stat-box.show { opacity: 1; }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+  }
+
+  .stat-num.green { color: var(--accent4); }
+  .stat-num.cyan { color: var(--accent2); }
+  .stat-num.amber { color: var(--accent3); }
+  .stat-num.red { color: var(--danger); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Preview table */
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  .preview-table th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px;
+  }
+
+  .preview-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(42,42,61,0.5);
+    color: var(--text);
+  }
+
+  .preview-table tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .badge-nm { background: rgba(16,185,129,0.15); color: var(--accent4); }
+  .badge-lp { background: rgba(6,182,212,0.15); color: var(--accent2); }
+  .badge-mp { background: rgba(245,158,11,0.15); color: var(--accent3); }
+  .badge-foil { background: rgba(124,58,237,0.2); color: #a78bfa; }
+  .badge-new { background: rgba(16,185,129,0.15); color: var(--accent4); }
+  .badge-updated { background: rgba(6,182,212,0.15); color: var(--accent2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #6d28d9; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-success { background: var(--accent4); color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-ebay { background: #e53238; color: white; }
+  .btn-ebay:hover { background: #c0272d; }
+
+  /* ===== SCREEN 2: CHAOS SORTING ===== */
+  .boxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .box-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .box-card:hover { border-color: var(--accent2); transform: translateY(-2px); }
+  .box-card.active { border-color: var(--accent); background: rgba(124,58,237,0.08); }
+  .box-card.full { border-color: var(--accent3); }
+
+  .box-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .box-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .box-fill {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .box-fill-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  .box-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .box-qr {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 18px;
+    opacity: 0.4;
+  }
+
+  /* Box detail */
+  .box-detail {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 24px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .box-detail.show { display: block; }
+
+  .box-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .box-detail-title { font-size: 20px; font-weight: 800; }
+
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .slot-grid::-webkit-scrollbar { width: 4px; }
+  .slot-grid::-webkit-scrollbar-track { background: var(--surface2); }
+  .slot-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .slot-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .slot-item.vacant { opacity: 0.3; border-style: dashed; }
+
+  .slot-code { color: var(--accent2); font-size: 10px; margin-bottom: 4px; }
+  .slot-name { color: var(--text); font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .slot-meta { color: var(--muted); font-size: 10px; }
+  .slot-price { color: var(--accent4); font-size: 11px; margin-top: 4px; }
+
+  /* ===== SCREEN 3: EBAY POSTING ===== */
+  .listing-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus { outline: none; border-color: var(--accent); }
+
+  .form-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .price-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .price-tag {
+    background: rgba(16,185,129,0.15);
+    color: var(--accent4);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+
+  .listing-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .preview-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .ebay-mock {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    color: #111;
+    font-family: Arial, sans-serif;
+  }
+
+  .ebay-title { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 8px; line-height: 1.4; }
+  .ebay-price { font-size: 24px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .ebay-shipping { font-size: 12px; color: #3665f3; margin-bottom: 8px; }
+  .ebay-condition { font-size: 12px; color: #555; margin-bottom: 12px; }
+  .ebay-btn { background: #3665f3; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; margin-bottom: 8px; }
+  .ebay-btn2 { background: white; color: #3665f3; border: 2px solid #3665f3; padding: 8px 20px; border-radius: 20px; font-size: 14px; cursor: pointer; width: 100%; }
+  .ebay-seller { font-size: 11px; color: #3665f3; margin-top: 10px; }
+
+  /* Queue */
+  .queue-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    transition: all 0.3s;
+  }
+
+  .queue-item.syncing { border-color: var(--accent2); background: rgba(6,182,212,0.05); }
+  .queue-item.done { border-color: var(--accent4); background: rgba(16,185,129,0.05); }
+  .queue-item.error { border-color: var(--danger); background: rgba(239,68,68,0.05); }
+
+  .queue-status { font-size: 16px; width: 20px; text-align: center; }
+  .queue-name { flex: 1; font-family: var(--mono); font-size: 12px; }
+  .queue-price { color: var(--accent4); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .queue-id { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Sandbox badge */
+  .sandbox-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245,158,11,0.15);
+    color: var(--accent3);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .listing-form { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    nav { padding: 12px 16px; gap: 4px; }
+    .screen { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">MTG<span>.</span>INV // DEMO</div>
+  <button class="tab-btn active" onclick="showScreen('upload', this)">① CSV Import</button>
+  <button class="tab-btn" onclick="showScreen('chaos', this)">② Chaos Sort</button>
+  <button class="tab-btn" onclick="showScreen('ebay', this)">③ eBay Sync</button>
+</nav>
+
+<!-- ===== SCREEN 1: CSV UPLOAD ===== -->
+<div id="screen-upload" class="screen active">
+  <div class="screen-title">ManaBox CSV Import</div>
+  <div class="screen-sub">// drop your export file — locations auto-assigned on ingest</div>
+
+  <div class="card">
+    <div class="card-title">Upload Export</div>
+    <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault(); this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="handleDrop(event)">
+      <span class="upload-icon">📦</span>
+      <h3>Drop ManaBox CSV here</h3>
+      <p>or <span class="browse">browse files</span> — accepts .csv export from ManaBox</p>
+      <input type="file" id="fileInput" accept=".csv" onchange="simulateImport()">
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressLabel">Parsing CSV...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box" id="stat1"><span class="stat-num green" id="statAdded">0</span><div class="stat-label">Cards Added</div></div>
+      <div class="stat-box" id="stat2"><span class="stat-num cyan" id="statUpdated">0</span><div class="stat-label">Updated</div></div>
+      <div class="stat-box" id="stat3"><span class="stat-num amber" id="statSkipped">0</span><div class="stat-label">Skipped</div></div>
+      <div class="stat-box" id="stat4"><span class="stat-num red" id="statErrors">0</span><div class="stat-label">Errors</div></div>
+    </div>
+  </div>
+
+  <div class="card" id="previewCard" style="display:none">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+      <div class="card-title" style="margin:0">Preview — Last 8 Records</div>
+      <button class="btn btn-primary" onclick="showScreen('chaos', document.querySelectorAll('.tab-btn')[1])">View Locations →</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="preview-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Set</th><th>Collector #</th><th>Foil</th><th>Condition</th><th>Location</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: CHAOS SORTING ===== -->
+<div id="screen-chaos" class="screen">
+  <div class="screen-title">Chaos Sort — Location Tracker</div>
+  <div class="screen-sub">// cards stored in scan order — database IS the organisation</div>
+
+  <div style="display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap;">
+    <div style="font-family:var(--mono); font-size:12px; color:var(--muted)">440,000 cards across</div>
+    <div style="font-family:var(--mono); font-size:12px; background:rgba(124,58,237,0.15); color:#a78bfa; padding:4px 12px; border-radius:4px; font-weight:700;">880 BOXES</div>
+    <div style="font-family:var(--mono); font-size:12px; color:var(--muted)">500 cards/box</div>
+    <div style="flex:1"></div>
+    <button class="btn btn-outline" onclick="printQR()">🖨 Print QR Codes</button>
+  </div>
+
+  <div class="boxes-grid" id="boxesGrid"></div>
+
+  <div class="box-detail" id="boxDetail">
+    <div class="box-detail-header">
+      <div>
+        <div class="card-title" style="margin-bottom:4px">BOX CONTENTS</div>
+        <div class="box-detail-title" id="boxDetailTitle">BOX-0001</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div style="text-align:center">
+          <div style="font-size:40px; line-height:1; background:white; padding:8px; border-radius:6px;">
+            <svg width="40" height="40" viewBox="0 0 5 5" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="2" height="2"/><rect x="3" y="0" width="2" height="2"/>
+              <rect x="0" y="3" width="2" height="2"/><rect x="1" y="1" width="1" height="1" fill="white"/>
+              <rect x="3" y="1" width="1" height="1" fill="white"/><rect x="1" y="3" width="1" height="1" fill="white"/>
+              <rect x="2" y="2" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/>
+              <rect x="3" y="4" width="2" height="1"/>
+            </svg>
+          </div>
+          <div style="font-family:var(--mono); font-size:9px; color:var(--muted); margin-top:4px;">SCAN TO VIEW</div>
+        </div>
+        <button class="btn btn-outline" onclick="closeBox()">✕ Close</button>
+      </div>
+    </div>
+    <div class="slot-grid" id="slotGrid"></div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: EBAY SYNC ===== -->
+<div id="screen-ebay" class="screen">
+  <div class="screen-title">eBay Listing Sync</div>
+  <div class="screen-sub">// create and sync listings — all pricing from TCGPlayer market data</div>
+
+  <div class="sandbox-badge">⚠ SANDBOX MODE — no real listings will be created</div>
+
+  <div class="listing-form">
+    <div>
+      <div class="card">
+        <div class="card-title">Listing Configuration</div>
+        <div class="form-group">
+          <label class="form-label">Card Name</label>
+          <input class="form-input" id="cardName" value="Black Lotus" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Set</label>
+          <input class="form-input" id="cardSet" value="Alpha (1993)" oninput="updatePreview()">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+          <div class="form-group">
+            <label class="form-label">Condition</label>
+            <select class="form-select" id="cardCondition" onchange="updatePreview()">
+              <option>Near Mint (NM)</option>
+              <option>Lightly Played (LP)</option>
+              <option>Moderately Played (MP)</option>
+              <option>Heavily Played (HP)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Foil</label>
+            <select class="form-select" id="cardFoil" onchange="updatePreview()">
+              <option value="no">Non-Foil</option>
+              <option value="yes">Foil ✨</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Listing Price (USD)</label>
+          <input class="form-input" id="cardPrice" value="4500.00" oninput="updatePreview()">
+          <div class="price-suggestion">TCGPlayer market: <span class="price-tag">$4,500.00</span> · Low: $3,800 · High: $5,200</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input class="form-input" value="BOX-0001 / SLOT-0047" readonly style="opacity:0.6">
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ebay" onclick="addToQueue()">+ Add to Sync Queue</button>
+          <button class="btn btn-outline" onclick="runSync()">▶ Run Sync</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="listing-preview">
+        <div class="preview-label">eBay Listing Preview</div>
+        <div class="ebay-mock">
+          <div class="ebay-title" id="previewTitle">Black Lotus Alpha 1993 MTG Near Mint (NM) Non-Foil — Magic: The Gathering</div>
+          <div class="ebay-price" id="previewPrice">US $4,500.00</div>
+          <div class="ebay-shipping">+ $4.50 shipping · Free returns</div>
+          <div class="ebay-condition" id="previewCondition">Condition: Near Mint (NM)</div>
+          <button class="ebay-btn">Buy It Now</button>
+          <button class="ebay-btn2">Add to watchlist</button>
+          <div class="ebay-seller">Seller: mtg_sam_cards (99.8% positive)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+      <div class="card-title" style="margin:0">Sync Queue</div>
+      <div style="font-family:var(--mono); font-size:11px; color:var(--muted)" id="queueCount">0 items</div>
+    </div>
+    <div class="queue-list" id="queueList">
+      <div style="text-align:center; padding:32px; color:var(--muted); font-family:var(--mono); font-size:12px;">
+        No items in queue — add cards above
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== NAVIGATION =====
+function showScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  btn.classList.add('active');
+
+  if (name === 'chaos' && !boxesBuilt) buildBoxes();
+}
+
+// ===== SCREEN 1: CSV IMPORT =====
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('dragover');
+  simulateImport();
+}
+
+const sampleCards = [
+  { name: 'Ragavan, Nimble Pilferer', set: 'MH2', num: '138', foil: false, cond: 'NM', loc: 'BOX-0001/SLOT-0001', status: 'new' },
+  { name: 'Wrenn and Six', set: 'MH1', num: '217', foil: true, cond: 'LP', loc: 'BOX-0001/SLOT-0002', status: 'new' },
+  { name: 'Force of Will', set: 'ALL', num: '28', foil: false, cond: 'NM', loc: 'BOX-0001/SLOT-0003', status: 'new' },
+  { name: 'Underground Sea', set: 'REV', num: '100', foil: false, cond: 'MP', loc: 'BOX-0001/SLOT-0004', status: 'new' },
+  { name: 'Liliana of the Veil', set: 'INN', num: '105', foil: true, cond: 'NM', loc: 'BOX-0001/SLOT-0005', status: 'updated' },
+  { name: 'Snapcaster Mage', set: 'INN', num: '78', foil: false, cond: 'NM', loc: 'BOX-0001/SLOT-0006', status: 'new' },
+  { name: 'Dark Confidant', set: 'RAV', num: '63', foil: false, cond: 'LP', loc: 'BOX-0001/SLOT-0007', status: 'new' },
+  { name: 'Tarmogoyf', set: 'FUT', num: '153', foil: false, cond: 'NM', loc: 'BOX-0001/SLOT-0008', status: 'new' },
+];
+
+function simulateImport() {
+  const wrap = document.getElementById('progressWrap');
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  const pct = document.getElementById('progressPct');
+
+  wrap.classList.add('show');
+  document.getElementById('previewCard').style.display = 'none';
+  document.querySelectorAll('.stat-box').forEach(b => { b.classList.remove('show'); });
+  document.getElementById('statAdded').textContent = '0';
+  document.getElementById('statUpdated').textContent = '0';
+  document.getElementById('statSkipped').textContent = '0';
+  document.getElementById('statErrors').textContent = '0';
+
+  const steps = [
+    { p: 10, l: 'Reading file...' }, { p: 25, l: 'Validating columns...' },
+    { p: 45, l: 'Deduplicating records...' }, { p: 65, l: 'Assigning locations...' },
+    { p: 80, l: 'Writing to database...' }, { p: 95, l: 'Generating QR codes...' },
+    { p: 100, l: 'Import complete ✓' }
+  ];
+
+  let i = 0;
+  const run = () => {
+    if (i >= steps.length) {
+      showStats();
+      return;
+    }
+    const s = steps[i++];
+    fill.style.width = s.p + '%';
+    label.textContent = s.l;
+    pct.textContent = s.p + '%';
+    setTimeout(run, 350);
+  };
+  run();
+}
+
+function showStats() {
+  const targets = [110247, 8432, 312, 7];
+  const ids = ['statAdded', 'statUpdated', 'statSkipped', 'statErrors'];
+  const statEls = document.querySelectorAll('.stat-box');
+
+  statEls.forEach((el, i) => {
+    setTimeout(() => {
+      el.classList.add('show');
+      countUp(ids[i], targets[i], 800);
+    }, i * 150);
+  });
+
+  setTimeout(buildPreviewTable, 900);
+}
+
+function countUp(id, target, duration) {
+  const el = document.getElementById(id);
+  const start = Date.now();
+  const tick = () => {
+    const p = Math.min((Date.now() - start) / duration, 1);
+    el.textContent = Math.floor(p * target).toLocaleString();
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function buildPreviewTable() {
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = '';
+  sampleCards.forEach(c => {
+    const foilBadge = c.foil ? `<span class="badge badge-foil">FOIL</span> ` : '';
+    const condClass = c.cond === 'NM' ? 'badge-nm' : c.cond === 'LP' ? 'badge-lp' : 'badge-mp';
+    const statusClass = c.status === 'new' ? 'badge-new' : 'badge-updated';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td style="color:var(--muted)">${c.set}</td>
+        <td style="color:var(--muted); font-family:var(--mono)">#${c.num}</td>
+        <td>${foilBadge}</td>
+        <td><span class="badge ${condClass}">${c.cond}</span></td>
+        <td style="font-family:var(--mono); font-size:11px; color:var(--accent2)">${c.loc}</td>
+        <td><span class="badge ${statusClass}">${c.status.toUpperCase()}</span></td>
+      </tr>`;
+  });
+  document.getElementById('previewCard').style.display = 'block';
+}
+
+// ===== SCREEN 2: CHAOS SORTING =====
+let boxesBuilt = false;
+
+const boxData = [
+  { num: 1, count: 500, cap: 500 },
+  { num: 2, count: 500, cap: 500 },
+  { num: 3, count: 487, cap: 500 },
+  { num: 4, count: 312, cap: 500 },
+  { num: 5, count: 500, cap: 500 },
+  { num: 6, count: 500, cap: 500 },
+  { num: 7, count: 156, cap: 500 },
+  { num: 8, count: 0, cap: 500 },
+];
+
+const slotCards = [
+  { name: 'Ragavan, Nimble Pilferer', meta: 'MH2 · NM · Non-Foil', price: '$48.00' },
+  { name: 'Wrenn and Six', meta: 'MH1 · LP · Foil ✨', price: '$32.50' },
+  { name: 'Force of Will', meta: 'ALL · NM · Non-Foil', price: '$85.00' },
+  { name: 'Underground Sea', meta: 'REV · MP · Non-Foil', price: '$210.00' },
+  { name: 'Liliana of the Veil', meta: 'INN · NM · Foil ✨', price: '$74.00' },
+  { name: 'Snapcaster Mage', meta: 'INN · NM · Non-Foil', price: '$42.00' },
+  { name: 'Dark Confidant', meta: 'RAV · LP · Non-Foil', price: '$18.00' },
+  { name: 'Tarmogoyf', meta: 'FUT · NM · Non-Foil', price: '$22.00' },
+  { name: 'Thoughtseize', meta: 'THS · NM · Non-Foil', price: '$14.00' },
+  { name: 'Jace, the Mind Sculptor', meta: 'WWK · NM · Non-Foil', price: '$65.00' },
+  { name: 'Scalding Tarn', meta: 'ZEN · LP · Non-Foil', price: '$38.00' },
+  { name: 'Misty Rainforest', meta: 'ZEN · NM · Non-Foil', price: '$35.00' },
+];
+
+function buildBoxes() {
+  const grid = document.getElementById('boxesGrid');
+  grid.innerHTML = '';
+
+  boxData.forEach(b => {
+    const pct = Math.round((b.count / b.cap) * 100);
+    const color = pct >= 100 ? 'var(--accent3)' : pct > 60 ? 'var(--accent2)' : 'var(--accent4)';
+    const isFull = pct >= 100;
+    const isEmpty = b.count === 0;
+
+    const el = document.createElement('div');
+    el.className = 'box-card' + (isFull ? ' full' : '');
+    el.innerHTML = `
+      <div class="box-qr">▦</div>
+      <div class="box-num">BOX-${String(b.num).padStart(4,'0')}</div>
+      <div class="box-name">${isFull ? '📦 Full' : isEmpty ? '📭 Empty' : '📂 Active'}</div>
+      <div class="box-fill"><div class="box-fill-bar" style="width:0%; background:${color}" data-pct="${pct}"></div></div>
+      <div class="box-count">${b.count.toLocaleString()} / ${b.cap} slots</div>
+    `;
+    el.onclick = () => openBox(b.num, el);
+    grid.appendChild(el);
+
+    // Animate fill bar
+    setTimeout(() => {
+      el.querySelector('.box-fill-bar').style.width = pct + '%';
+    }, 100 + b.num * 80);
+  });
+
+  boxesBuilt = true;
+}
+
+function openBox(num, el) {
+  document.querySelectorAll('.box-card').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+
+  const detail = document.getElementById('boxDetail');
+  const title = document.getElementById('boxDetailTitle');
+  const slotGrid = document.getElementById('slotGrid');
+
+  title.textContent = `BOX-${String(num).padStart(4,'0')} — Slot Contents`;
+
+  slotGrid.innerHTML = '';
+
+  for (let i = 0; i < 20; i++) {
+    const card = slotCards[i % slotCards.length];
+    const isVacant = i === 13 || i === 17;
+    const el2 = document.createElement('div');
+    el2.className = 'slot-item' + (isVacant ? ' vacant' : '');
+    const slotNum = String(i + 1).padStart(4, '0');
+    el2.innerHTML = `
+      <div class="slot-code">BOX-${String(num).padStart(4,'0')}-SLOT-${slotNum}</div>
+      ${isVacant
+        ? '<div class="slot-name" style="color:var(--muted)">— VACANT —</div>'
+        : `<div class="slot-name">${card.name}</div><div class="slot-meta">${card.meta}</div><div class="slot-price">${card.price}</div>`
+      }
+    `;
+    slotGrid.appendChild(el2);
+  }
+
+  detail.classList.add('show');
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeBox() {
+  document.getElementById('boxDetail').classList.remove('show');
+  document.querySelectorAll('.box-card').forEach(b => b.classList.remove('active'));
+}
+
+function printQR() {
+  alert('🖨 In production, this generates a PDF of all box QR codes for printing and sticking on physical boxes.');
+}
+
+// ===== SCREEN 3: EBAY SYNC =====
+function updatePreview() {
+  const name = document.getElementById('cardName').value;
+  const set = document.getElementById('cardSet').value;
+  const cond = document.getElementById('cardCondition').value;
+  const foil = document.getElementById('cardFoil').value === 'yes' ? '· Foil ✨' : '';
+  const price = parseFloat(document.getElementById('cardPrice').value || 0).toFixed(2);
+
+  document.getElementById('previewTitle').textContent =
+    `${name} ${set} MTG ${cond} ${foil} — Magic: The Gathering`;
+  document.getElementById('previewPrice').textContent = `US $${parseFloat(price).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+  document.getElementById('previewCondition').textContent = `Condition: ${cond}`;
+}
+
+let queueItems = [];
+
+function addToQueue() {
+  const name = document.getElementById('cardName').value;
+  const price = document.getElementById('cardPrice').value;
+  queueItems.push({ name, price, status: 'pending', id: 'PENDING' });
+  renderQueue();
+}
+
+function renderQueue() {
+  const list = document.getElementById('queueList');
+  document.getElementById('queueCount').textContent = queueItems.length + ' item' + (queueItems.length !== 1 ? 's' : '');
+
+  if (queueItems.length === 0) {
+    list.innerHTML = '<div style="text-align:center; padding:32px; color:var(--muted); font-family:var(--mono); font-size:12px;">No items in queue — add cards above</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  queueItems.forEach((item, i) => {
+    const statusIcons = { pending: '○', syncing: '<span class="spin">⟳</span>', done: '✓', error: '✕' };
+    const statusClasses = { pending: '', syncing: 'syncing', done: 'done', error: 'error' };
+    const el = document.createElement('div');
+    el.className = 'queue-item ' + statusClasses[item.status];
+    el.innerHTML = `
+      <div class="queue-status">${statusIcons[item.status]}</div>
+      <div class="queue-name">${item.name}</div>
+      <div class="queue-price">$${parseFloat(item.price).toLocaleString()}</div>
+      <div class="queue-id">${item.id}</div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function runSync() {
+  if (queueItems.length === 0) {
+    // Add some demo items
+    const demoItems = [
+      { name: 'Black Lotus', price: '4500.00' },
+      { name: 'Mox Pearl', price: '1200.00' },
+      { name: 'Ancestral Recall', price: '3800.00' },
+    ];
+    demoItems.forEach(d => { queueItems.push({ ...d, status: 'pending', id: 'PENDING' }); });
+    renderQueue();
+  }
+
+  queueItems.forEach((item, i) => {
+    item.status = 'pending';
+    setTimeout(() => {
+      item.status = 'syncing';
+      item.id = 'SYNCING...';
+      renderQueue();
+      setTimeout(() => {
+        item.status = i === 2 ? 'error' : 'done';
+        item.id = i === 2 ? 'ERR: RATE_LIMIT' : `#${Math.floor(Math.random() * 9e11 + 1e11)}`;
+        renderQueue();
+      }, 1200 + i * 300);
+    }, i * 600);
+  });
+}
+</script>
+</body>
+</html>

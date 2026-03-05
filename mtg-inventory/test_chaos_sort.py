@@ -30,15 +30,19 @@ def persistent_db():
     
     engine = create_engine(f'sqlite:///{db_path}')
     Base.metadata.create_all(bind=engine)
-    TestSession = sessionmaker(bind=engine)
+    TestSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = TestSession()
     
     yield db, db_path
     
     # Cleanup
-    db.close()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    try:
+        db.close()
+        engine.dispose()  # Release all connections
+        if os.path.exists(db_path):
+            os.remove(db_path)
+    except Exception:
+        pass  # Ignore cleanup errors
 
 
 @pytest.fixture

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MTG System — How It All Connects</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    font-family: 'Nunito', sans-serif;
+    padding: 32px 24px;
+    color: white;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header h1 { font-size: 32px; font-weight: 900; margin-bottom: 8px;
+    background: linear-gradient(135deg, #f093fb, #f5576c, #fda085);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { font-size: 15px; color: rgba(255,255,255,0.5); }
+
+  .diagram { max-width: 980px; margin: 0 auto; position: relative; }
+
+  /* CENTER HUB */
+  .hub {
+    width: 160px; height: 160px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    margin: 0 auto 40px;
+    box-shadow: 0 0 60px rgba(102,126,234,0.5), 0 0 120px rgba(102,126,234,0.2);
+    position: relative; z-index: 10;
+    border: 3px solid rgba(255,255,255,0.2);
+  }
+  .hub-icon { font-size: 42px; line-height: 1; margin-bottom: 6px; }
+  .hub-label { font-size: 14px; font-weight: 800; letter-spacing: 1px; text-align: center; line-height: 1.2; }
+  .hub-sub { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+  /* ORBIT ROWS */
+  .orbit-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* NODE */
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 130px;
+    position: relative;
+  }
+
+  .node-bubble {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+    position: relative;
+  }
+
+  .node-bubble:hover {
+    transform: scale(1.08) translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  }
+
+  .node-label {
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .node-desc {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* COLORS */
+  .blue { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+  .green { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+  .orange { background: linear-gradient(135deg, #fa709a, #fee140); }
+  .purple { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
+  .red { background: linear-gradient(135deg, #f5576c, #f093fb); }
+  .teal { background: linear-gradient(135deg, #4facfe, #43e97b); }
+  .gold { background: linear-gradient(135deg, #f6d365, #fda085); }
+  .pink { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .lime { background: linear-gradient(135deg, #84fab0, #8fd3f4); }
+  .amber { background: linear-gradient(135deg, #ffecd2, #fcb69f); }
+
+  /* FLOW ARROWS connecting sections */
+  .flow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: -8px 0 12px;
+    font-size: 22px;
+    opacity: 0.4;
+  }
+
+  /* SECTION LABELS */
+  .section-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 0 auto 16px;
+  }
+
+  .section-wrap { text-align: center; margin-bottom: 8px; }
+
+  .label-input { background: rgba(79,172,254,0.2); color: #4facfe; border: 1px solid rgba(79,172,254,0.3); }
+  .label-core { background: rgba(102,126,234,0.2); color: #a78bfa; border: 1px solid rgba(102,126,234,0.3); }
+  .label-data { background: rgba(67,233,123,0.2); color: #43e97b; border: 1px solid rgba(67,233,123,0.3); }
+  .label-sell { background: rgba(250,112,154,0.2); color: #fa709a; border: 1px solid rgba(250,112,154,0.3); }
+  .label-mvp2 { background: rgba(168,139,250,0.15); color: #c4b5fd; border: 1px dashed rgba(168,139,250,0.4); }
+
+  /* CONNECTOR LINES */
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: -4px 0 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+  .line { height: 1px; width: 40px; background: rgba(255,255,255,0.15); }
+
+  /* BADGE */
+  .badge-free {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: #43e97b;
+    color: #0a1628;
+    font-size: 8px;
+    font-weight: 900;
+    padding: 2px 5px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-mvp2 {
+    position: absolute;
+    top: -4px; right: -4px;
+    background: #a78bfa;
+    color: white;
+    font-size: 8px;
+    font-weight: 900;
+    padding: 2px 5px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  /* INFO BOX */
+  .info-strip {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 32px;
+  }
+
+  .info-chip {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  @media (max-width: 600px) {
+    .orbit-row { gap: 10px; }
+    .node { width: 100px; }
+    .node-bubble { width: 72px; height: 72px; font-size: 26px; }
+    .hub { width: 130px; height: 130px; }
+    .hub-icon { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🃏 How Sam's Card System Works</h1>
+  <p>A plain-English guide to how all the pieces talk to each other</p>
+</div>
+
+<div class="diagram">
+
+  <!-- INPUT SOURCES -->
+  <div class="section-wrap"><span class="section-label label-input">① Cards Come In</span></div>
+  <div class="orbit-row">
+    <div class="node">
+      <div class="node-bubble blue">📱</div>
+      <div class="node-label">ManaBox App</div>
+      <div class="node-desc">Sam scans cards on his phone</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble teal">☁️</div>
+      <div class="node-label">Google Drive</div>
+      <div class="node-desc">ManaBox auto-backs up every night</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble amber">🖨️</div>
+      <div class="node-label">fi-8170 Scanner</div>
+      <div class="node-desc">High-speed hardware scanner</div>
+    </div>
+  </div>
+
+  <!-- ARROW DOWN -->
+  <div class="connector"><div class="line"></div><div class="dot"></div> AUTO-IMPORTS EVERY HOUR <div class="dot"></div><div class="line"></div></div>
+
+  <!-- CORE SYSTEM -->
+  <div class="section-wrap"><span class="section-label label-core">② The Brain</span></div>
+  <div class="hub">
+    <div class="hub-icon">⚙️</div>
+    <div class="hub-label">MTG Inventory<br>System</div>
+    <div class="hub-sub">Built by Sam's dev</div>
+  </div>
+
+  <!-- MIDDLE ROW: data enrichment -->
+  <div class="connector"><div class="line"></div><div class="dot"></div> LOOKS UP CARD INFO & PRICES <div class="dot"></div><div class="line"></div></div>
+  <div class="section-wrap"><span class="section-label label-data">③ Gets Card Info For Free</span></div>
+  <div class="orbit-row">
+    <div class="node">
+      <div class="node-bubble green" style="position:relative">🔍
+        <span class="badge-free">FREE</span>
+      </div>
+      <div class="node-label">Scryfall</div>
+      <div class="node-desc">Identifies every card — name, set, image</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble gold" style="position:relative">💰
+        <span class="badge-free">FREE</span>
+      </div>
+      <div class="node-label">TCGPlayer</div>
+      <div class="node-desc">Gets today's market price for every card</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble lime" style="position:relative">📦
+        <span class="badge-free">FREE</span>
+      </div>
+      <div class="node-label">QR Codes</div>
+      <div class="node-desc">Labels each physical box so Sam can find any card</div>
+    </div>
+  </div>
+
+  <!-- ARROW DOWN -->
+  <div class="connector"><div class="line"></div><div class="dot"></div> LISTS FOR SALE AUTOMATICALLY <div class="dot"></div><div class="line"></div></div>
+
+  <!-- SELLING PHASE 1 -->
+  <div class="section-wrap"><span class="section-label label-sell">④ Lists Cards For Sale (Phase 1)</span></div>
+  <div class="orbit-row">
+    <div class="node">
+      <div class="node-bubble red">🛍️</div>
+      <div class="node-label">eBay</div>
+      <div class="node-desc">Creates listings automatically with correct prices</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble orange">🃏</div>
+      <div class="node-label">TCGPlayer Store</div>
+      <div class="node-desc">Lists directly to the #1 MTG marketplace</div>
+    </div>
+  </div>
+
+  <!-- MVP2 -->
+  <div class="connector"><div class="line"></div><div class="dot"></div> MORE MARKETPLACES COMING LATER <div class="dot"></div><div class="line"></div></div>
+  <div class="section-wrap"><span class="section-label label-mvp2">⑤ Even More Places to Sell (MVP 2)</span></div>
+  <div class="orbit-row">
+    <div class="node">
+      <div class="node-bubble purple" style="position:relative">🏪
+        <span class="badge-mvp2">SOON</span>
+      </div>
+      <div class="node-label">Shopify</div>
+      <div class="node-desc">Sam's own online store — keeps full profit</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble pink" style="position:relative">🌍
+        <span class="badge-mvp2">SOON</span>
+      </div>
+      <div class="node-label">CardTrader</div>
+      <div class="node-desc">Sells to European buyers</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble teal" style="position:relative">📺
+        <span class="badge-mvp2">SOON</span>
+      </div>
+      <div class="node-label">Whatnot</div>
+      <div class="node-desc">Live auctions — great for bulk cards</div>
+    </div>
+    <div class="node">
+      <div class="node-bubble blue" style="position:relative">✨
+        <span class="badge-mvp2">SOON</span>
+      </div>
+      <div class="node-label">CollX</div>
+      <div class="node-desc">Growing collector community</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- INFO STRIP -->
+<div class="info-strip">
+  <div class="info-chip">💸 $0/month ongoing cost</div>
+  <div class="info-chip">🔄 Auto-syncs every hour</div>
+  <div class="info-chip">📦 440,000 cards tracked</div>
+  <div class="info-chip">📍 Every card has a location</div>
+  <div class="info-chip">🤖 Prices update daily</div>
+</div>
+
+</body>
+</html>

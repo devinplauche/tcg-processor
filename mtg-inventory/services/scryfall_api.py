@@ -24,7 +24,7 @@ class ScryfallAPI:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             return None
     
     @staticmethod
@@ -37,7 +37,7 @@ class ScryfallAPI:
             response.raise_for_status()
             data = response.json()
             return data.get("data", [])[:limit]
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             return []
 
 
@@ -68,7 +68,7 @@ class TCGPlayerAPI:
             if result.get("success"):
                 self._token = result.get("data", {}).get("token")
                 return self._token
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             pass
         return None
     
@@ -88,7 +88,7 @@ class TCGPlayerAPI:
             results = response.json().get("results", [])
             if results:
                 return results[0].get("productId")
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             pass
         return None
     
@@ -107,7 +107,7 @@ class TCGPlayerAPI:
             data = response.json()
             if data.get("success"):
                 return data.get("data", {})
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             pass
         return None
 
@@ -145,7 +145,7 @@ class eBayAPI:
             result = response.json()
             self._access_token = result.get("access_token")
             return self._access_token
-        except requests.exceptions.RequestException:
+        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             pass
         return None
     

@@ -5,3 +5,19 @@ qrcode
 pillow
 python-dotenv
 requests
+
+# Testing & Mocking
+pytest>=7.0
+pytest-cov>=3.0
+vcrpy>=4.1  # Record/playback HTTP interactions
+responses>=0.20  # Mock requests library
+
+# Resilience & Rate Limiting
+tenacity>=8.0  # Retry logic with exponential backoff
+
+# Google Drive Integration (for future)
+google-auth-oauthlib>=0.6
+google-drive-api>=1.0
+
+# Monitoring & Logging
+python-json-logger>=2.0
