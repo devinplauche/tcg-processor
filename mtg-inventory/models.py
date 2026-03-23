@@ -23,10 +23,10 @@ class Card(Base):
     slot_number = Column(Integer)
     list_on_ebay = Column(Boolean, default=False)
     ebay_listing_id = Column(Text)
-    tcgplayer_product_id = Column(Text)
     created_at = Column(TIMESTAMP, default=func.now())
     updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
     prices = relationship("Price", back_populates="card")
+    import_links = relationship("ImportCardLink", back_populates="card")
 
 class Price(Base):
     __tablename__ = 'prices'
@@ -54,3 +54,16 @@ class SyncLog(Base):
     cards_processed = Column(Integer)
     errors = Column(Integer)
     run_at = Column(TIMESTAMP, default=func.now())
+    card_links = relationship("ImportCardLink", back_populates="sync_log")
+
+
+class ImportCardLink(Base):
+    __tablename__ = 'import_card_links'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sync_log_id = Column(Integer, ForeignKey('sync_log.id'), nullable=False)
+    card_id = Column(Integer, ForeignKey('cards.id'), nullable=False)
+    status = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, default=func.now())
+
+    sync_log = relationship("SyncLog", back_populates="card_links")
+    card = relationship("Card", back_populates="import_links")

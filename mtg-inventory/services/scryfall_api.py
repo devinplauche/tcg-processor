@@ -41,76 +41,6 @@ class ScryfallAPI:
             return []
 
 
-class TCGPlayerAPI:
-    """TCGPlayer API client for pricing and product data"""
-    
-    BASE_URL = "https://api.tcgplayer.com/v1.32.0"
-    
-    def __init__(self):
-        self.api_key = Config.TCGPLAYER_API_KEY
-        self.api_secret = Config.TCGPLAYER_API_SECRET
-        self._token = None
-    
-    def get_auth_token(self) -> Optional[str]:
-        """Get authentication token from TCGPlayer"""
-        if not self.api_key or not self.api_secret:
-            return None
-        
-        try:
-            url = f"{self.BASE_URL}/token"
-            data = {
-                "publicKey": self.api_key,
-                "privateKey": self.api_secret
-            }
-            response = requests.post(url, json=data, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            if result.get("success"):
-                self._token = result.get("data", {}).get("token")
-                return self._token
-        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
-            pass
-        return None
-    
-    def get_product_id(self, product_name: str) -> Optional[int]:
-        """Get TCGPlayer product ID by name"""
-        if not self._token:
-            self.get_auth_token()
-        if not self._token:
-            return None
-        
-        try:
-            url = f"{self.BASE_URL}/catalog/products"
-            params = {"q": product_name, "limit": 1}
-            headers = {"Authorization": f"Bearer {self._token}"}
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
-            results = response.json().get("results", [])
-            if results:
-                return results[0].get("productId")
-        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
-            pass
-        return None
-    
-    def get_pricing(self, product_id: int) -> Optional[Dict]:
-        """Get current pricing for a product"""
-        if not self._token:
-            self.get_auth_token()
-        if not self._token:
-            return None
-        
-        try:
-            url = f"{self.BASE_URL}/pricing/product/{product_id}"
-            headers = {"Authorization": f"Bearer {self._token}"}
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            if data.get("success"):
-                return data.get("data", {})
-        except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
-            pass
-        return None
-
 
 class eBayAPI:
     """eBay API client for listing creation and management"""
@@ -198,3 +128,27 @@ class eBayAPI:
         except requests.exceptions.RequestException:
             pass
         return False
+
+    def update_listing(self, listing_id: str, update_data: Dict) -> Optional[Dict]:
+        """Update an existing eBay inventory listing."""
+        if not self._access_token:
+            self.get_access_token()
+        if not self._access_token:
+            return None
+
+        try:
+            url = f"{self.BASE_URL}/sell/inventory/v1/inventory_item/{listing_id}"
+            headers = {
+                "Authorization": f"Bearer {self._access_token}",
+                "Content-Type": "application/json",
+            }
+            response = requests.put(url, headers=headers, json=update_data, timeout=10)
+            if response.status_code in (200, 204):
+                return {"success": True, "listing_id": listing_id}
+
+            try:
+                return response.json()
+            except Exception:
+                return {"success": False, "status_code": response.status_code}
+        except requests.exceptions.RequestException:
+            return None

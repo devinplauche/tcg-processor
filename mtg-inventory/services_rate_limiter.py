@@ -190,11 +190,6 @@ SCRYFALL_LIMITER = RateLimiter(
     name="Scryfall"
 )
 
-TCGPLAYER_LIMITER = RateLimiter(
-    calls_per_second=16.67,  # 1000 per minute
-    name="TCGPlayer"
-)
-
 EBAY_LIMITER = RateLimiter(
     calls_per_second=100,
     name="eBay"
@@ -205,12 +200,6 @@ SCRYFALL_BREAKER = CircuitBreaker(
     failure_threshold=5,
     recovery_timeout=60,
     name="ScryfallBreaker"
-)
-
-TCGPLAYER_BREAKER = CircuitBreaker(
-    failure_threshold=3,
-    recovery_timeout=120,
-    name="TCGPlayerBreaker"
 )
 
 EBAY_BREAKER = CircuitBreaker(

@@ -74,55 +74,6 @@ class ScryfallSearchContract(APIContract):
     }
 
 
-class TCGPlayerAuthContract(APIContract):
-    """Contract for TCGPlayer authentication response"""
-    
-    required_fields = ["success", "data"]
-    optional_fields = []
-    
-    field_types = {
-        "success": bool,
-        "data": dict,
-    }
-
-
-class TCGPlayerTokenContract(APIContract):
-    """Contract for TCGPlayer token data"""
-    
-    required_fields = ["token"]
-    optional_fields = ["user_id", "user_email"]
-    
-    field_types = {
-        "token": str,
-    }
-
-
-class TCGPlayerPricingContract(APIContract):
-    """Contract for TCGPlayer pricing response"""
-    
-    required_fields = ["success", "data"]
-    optional_fields = []
-    
-    field_types = {
-        "success": bool,
-        "data": dict,
-    }
-
-
-class TCGPlayerPricingDataContract(APIContract):
-    """Contract for TCGPlayer pricing data"""
-    
-    required_fields = ["productId", "lowestListing"]
-    optional_fields = ["lowestListingFoil", "average", "averageFoil"]
-    
-    field_types = {
-        "productId": int,
-        "lowestListing": dict,
-        "lowestListingFoil": dict,
-        "average": (int, float),
-    }
-
-
 class eBayAccessTokenContract(APIContract):
     """Contract for eBay OAuth access token response"""
     

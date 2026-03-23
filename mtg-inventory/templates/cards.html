@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="cards-screen">
+    <h1 class="card-heading">Your Inventory</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 24px;">
+        // browse and manage your collection
+    </p>
+    <div id="boxFilterTag" class="card" style="display:none; margin-bottom: 12px; font-size: 12px; font-family: var(--mono);"></div>
+
+    <!-- Search and Filters -->
+    <div class="card">
+        <div class="card-title">🔍 Search & Filter</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 12px;">
+            <div class="form-group">
+                <label for="searchInput" class="form-label">Card Name</label>
+                <input type="text" id="searchInput" class="form-input" placeholder="Search...">
+            </div>
+            <div class="form-group">
+                <label for="filterCondition" class="form-label">Condition</label>
+                <select id="filterCondition" class="form-select">
+                    <option value="">All Conditions</option>
+                    <option value="NM">Near Mint (NM)</option>
+                    <option value="LP">Lightly Played (LP)</option>
+                    <option value="MP">Moderately Played (MP)</option>
+                    <option value="HP">Heavily Played (HP)</option>
+                    <option value="PO">Poor (PO)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filterFoil" class="form-label">Foil</label>
+                <select id="filterFoil" class="form-select">
+                    <option value="">All Foils</option>
+                    <option value="foil">Foil</option>
+                    <option value="normal">Normal</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sortBy" class="form-label">Sort By</label>
+                <select id="sortBy" class="form-select">
+                    <option value="name">Name</option>
+                    <option value="value">Value (High to Low)</option>
+                    <option value="quantity">Quantity</option>
+                    <option value="date">Recently Added</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+        <button class="btn btn-outline" onclick="clearFilters()" style="margin-left: 8px;">Clear</button>
+    </div>
+
+    <!-- Cards Table -->
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-title">📋 Cards</div>
+        <div style="overflow-x: auto;">
+            <table class="cards-table">
+                <thead>
+                    <tr>
+                        <th>Card Name</th>
+                        <th>Set</th>
+                        <th>Condition</th>
+                        <th>Foil</th>
+                        <th>Qty</th>
+                        <th>Value</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody id="cardsTableBody">
+                    <tr><td colspan="7" style="text-align: center; color: var(--muted);">Loading cards...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <div style="font-size: 12px; color: var(--muted);">
+                Showing <span id="resultsInfo">0</span> cards
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline" id="prevBtn" onclick="previousPage()" style="font-size: 12px; padding: 6px 12px;">← Previous</button>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                    Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                </div>
+                <button class="btn btn-outline" id="nextBtn" onclick="nextPage()" style="font-size: 12px; padding: 6px 12px;">Next →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cards-screen {
+    animation: fadeIn 0.3s ease;
+}
+
+.screen-sub {
+    font-size: 13px;
+    margin-bottom: 24px;
+}
+
+.cards-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-top: 12px;
+}
+
+.cards-table th {
+    text-align: left;
+    padding: 12px;
+    color: var(--muted);
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px;
+    background: var(--surface2);
+    position: sticky;
+    top: 0;
+}
+
+.cards-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.cards-table tbody tr:hover {
+    background: var(--surface2);
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+let currentFilters = {
+    name: '',
+    condition: '',
+    foil: '',
+    box: '',
+    sortBy: 'name',
+    page: 1,
+    limit: 50
+};
+
+// Load cards on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const box = params.get('box');
+    if (box) {
+        currentFilters.box = box;
+        const tag = document.getElementById('boxFilterTag');
+        tag.style.display = 'block';
+        tag.innerHTML = `Showing cards in <strong>BOX-${String(box).padStart(4, '0')}</strong> <a href="/cards" style="margin-left:8px; color:var(--accent2);">Clear box filter</a>`;
+    }
+
+    loadCards();
+    
+    // Real-time search with debounce
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(function() {
+            currentFilters.page = 1;
+            loadCards();
+        }, 300));
+    }
+});
+
+function applyFilters() {
+    currentFilters.name = document.getElementById('searchInput').value;
+    currentFilters.condition = document.getElementById('filterCondition').value;
+    currentFilters.foil = document.getElementById('filterFoil').value;
+    currentFilters.sortBy = document.getElementById('sortBy').value;
+    currentFilters.page = 1;
+    loadCards();
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterCondition').value = '';
+    document.getElementById('filterFoil').value = '';
+    document.getElementById('sortBy').value = 'name';
+    const retainedBox = currentFilters.box;
+    currentFilters = {
+        name: '',
+        condition: '',
+        foil: '',
+        box: retainedBox,
+        sortBy: 'name',
+        page: 1,
+        limit: 50
+    };
+    loadCards();
+}
+
+async function loadCards() {
+    const params = new URLSearchParams({
+        q: currentFilters.name,
+        condition: currentFilters.condition,
+        foil: currentFilters.foil,
+        box: currentFilters.box,
+        sort: currentFilters.sortBy,
+        page: currentFilters.page,
+        limit: currentFilters.limit
+    });
+
+    try {
+        const resp = await fetch(`/api/cards/list?${params}`);
+        const data = await resp.json();
+        
+        const tbody = document.getElementById('cardsTableBody');
+        
+        if (data.cards.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--muted);">No cards found</td></tr>';
+            document.getElementById('resultsInfo').textContent = '0';
+            document.getElementById('currentPage').textContent = '0';
+            document.getElementById('totalPages').textContent = '0';
+        } else {
+            tbody.innerHTML = data.cards.map(card => {
+                const value = (card.purchase_price || 0) * (card.quantity || 1);
+                return `
+                    <tr>
+                        <td><strong>${card.name}</strong></td>
+                        <td>${card.set_code || '—'}</td>
+                        <td><span class="badge badge-info">${card.condition || '—'}</span></td>
+                        <td>${card.foil ? '✨ Yes' : 'No'}</td>
+                        <td>${card.quantity}</td>
+                        <td>$${value.toFixed(2)}</td>
+                        <td><code style="font-size: 10px; color: var(--accent2);">${card.location_code || '—'}</code></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('resultsInfo').textContent = data.total;
+            document.getElementById('currentPage').textContent = data.page;
+            document.getElementById('totalPages').textContent = data.pages;
+            document.getElementById('prevBtn').disabled = data.page === 1;
+            document.getElementById('nextBtn').disabled = data.page === data.pages;
+        }
+    } catch (err) {
+        console.error('Failed to load cards:', err);
+        document.getElementById('cardsTableBody').innerHTML = 
+            '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Error loading cards</td></tr>';
+    }
+}
+
+function previousPage() {
+    if (currentFilters.page > 1) {
+        currentFilters.page--;
+        loadCards();
+        window.scrollTo(0, 0);
+    }
+}
+
+function nextPage() {
+    currentFilters.page++;
+    loadCards();
+    window.scrollTo(0, 0);
+}
+
+// Debounce helper if not already defined
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+</script>
+
+{% endblock %}

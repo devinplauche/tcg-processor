@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-heading">eBay Integration</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 20px;">
+        // create and track eBay listings from inventory cards
+    </p>
+
+    <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap;">
+        <button class="btn btn-primary" id="btnCheckEbay">Check eBay Auth</button>
+        <span id="ebayStatus" style="font-family: var(--mono); font-size: 12px; color: var(--muted);">Not checked yet</span>
+    </div>
+
+    <div class="form-group" style="max-width: 320px;">
+        <label class="form-label" for="limitCards">Load Cards</label>
+        <select id="limitCards" class="form-select">
+            <option value="50">50 cards</option>
+            <option value="100" selected>100 cards</option>
+            <option value="200">200 cards</option>
+        </select>
+    </div>
+    <button class="btn btn-outline" id="btnLoadCards">Load Inventory Cards</button>
+    <button class="btn btn-success" id="btnBulkPublish" style="margin-left: 8px;">Bulk Publish Selected</button>
+    <div id="ebayActionStatus" style="margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted);">
+        No action executed yet
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">Cards</div>
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Set</th>
+                    <th>Condition</th>
+                    <th>Qty</th>
+                    <th>Purchase Price</th>
+                    <th>Listing ID</th>
+                    <th>Update Price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="cardsBody">
+                <tr><td colspan="10" style="text-align: center; color: var(--muted);">Click "Load Inventory Cards"</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let cardsCache = [];
+
+async function loadCards() {
+    const limit = document.getElementById('limitCards').value;
+    const body = document.getElementById('cardsBody');
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);">Loading...</td></tr>';
+
+    try {
+        const resp = await fetch(`/api/ebay/cards?limit=${encodeURIComponent(limit)}`);
+        const cards = await resp.json();
+        cardsCache = cards;
+
+        if (!Array.isArray(cards) || cards.length === 0) {
+            body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);">No cards found.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = cards.map((card) => `
+            <tr>
+                <td><input type="checkbox" data-role="publish-select" data-listing-id="${escapeHtml(card.ebay_listing_id || '')}"/></td>
+                <td>${card.id}</td>
+                <td>${escapeHtml(card.name || '—')}</td>
+                <td>${escapeHtml(card.set_code || '—')}</td>
+                <td>${escapeHtml(card.condition || '—')}</td>
+                <td>${card.quantity ?? 0}</td>
+                <td>$${Number(card.purchase_price || 0).toFixed(2)}</td>
+                <td><code>${escapeHtml(card.ebay_listing_id || '—')}</code></td>
+                <td>
+                    <input
+                        data-role="update-price"
+                        type="number"
+                        step="0.01"
+                        value="${Number(card.purchase_price || 0).toFixed(2)}"
+                        class="form-input"
+                        style="max-width: 110px; padding: 6px 8px;"
+                    />
+                </td>
+                <td>
+                    <button class="btn btn-primary" data-action="create" style="padding: 6px 10px; font-size: 11px;" onclick="createListing(${card.id}, this)">
+                        Create Listing
+                    </button>
+                    <button class="btn btn-outline" data-action="update" style="padding: 6px 10px; font-size: 11px; margin-left: 4px;" onclick="updateListing(${card.id}, this)">
+                        Update
+                    </button>
+                    <button class="btn btn-success" data-action="publish" style="padding: 6px 10px; font-size: 11px; margin-left: 4px;" onclick="publishListing(${card.id})">
+                        Publish
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);">Failed to load cards.</td></tr>';
+    }
+}
+
+async function checkEbayAuth() {
+    const status = document.getElementById('ebayStatus');
+    status.textContent = 'Checking...';
+    try {
+        const resp = await fetch('/api/ebay/health');
+        const data = await resp.json();
+        const mode = data.sandbox_mode ? 'sandbox' : 'production';
+        status.textContent = data.token_ok
+            ? `Ready (${mode})`
+            : `Configured=${data.configured}, RefreshToken=${data.refresh_token_configured}, TokenOK=${data.token_ok}`;
+    } catch (err) {
+        status.textContent = 'Failed to check eBay auth';
+    }
+}
+
+async function createListing(cardId, buttonEl) {
+    const status = document.getElementById('ebayActionStatus');
+    try {
+        const resp = await fetch('/api/ebay/listings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ card_id: cardId }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            throw new Error(data.error || 'Failed to create listing');
+        }
+
+        const row = buttonEl ? buttonEl.closest('tr') : null;
+        if (row) {
+            const codeEl = row.querySelector('td code');
+            if (codeEl) {
+                codeEl.textContent = data.listing_id;
+            }
+            const checkbox = row.querySelector("input[data-role='publish-select']");
+            if (checkbox) {
+                checkbox.dataset.listingId = data.listing_id;
+            }
+        }
+
+        const card = findCardById(cardId);
+        if (card) {
+            card.ebay_listing_id = data.listing_id;
+        }
+
+        status.textContent = `Created listing ${data.listing_id} for card ${cardId}`;
+    } catch (err) {
+        status.textContent = err.message || 'Failed to create listing';
+    }
+}
+
+function findCardById(cardId) {
+    return cardsCache.find((card) => Number(card.id) === Number(cardId));
+}
+
+async function updateListing(cardId, buttonEl) {
+    const row = buttonEl.closest('tr');
+    const status = document.getElementById('ebayActionStatus');
+    const priceInput = row.querySelector("input[data-role='update-price']");
+    const card = findCardById(cardId);
+
+    if (!card || !card.ebay_listing_id) {
+        status.textContent = 'Create listing first before update';
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/ebay/listings/${encodeURIComponent(card.ebay_listing_id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                price: Number(priceInput.value || 0),
+                quantity: Number(card.quantity || 1),
+            }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            throw new Error(data.error || 'Failed to update listing');
+        }
+        status.textContent = `Updated listing ${card.ebay_listing_id}`;
+    } catch (err) {
+        status.textContent = err.message || 'Failed to update listing';
+    }
+}
+
+async function publishListing(cardId) {
+    const status = document.getElementById('ebayActionStatus');
+    const card = findCardById(cardId);
+    if (!card || !card.ebay_listing_id) {
+        status.textContent = 'Create listing first before publish';
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/ebay/listings/${encodeURIComponent(card.ebay_listing_id)}/publish`, {
+            method: 'POST',
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            throw new Error(data.error || 'Failed to publish listing');
+        }
+        status.textContent = `Published listing ${card.ebay_listing_id}`;
+    } catch (err) {
+        status.textContent = err.message || 'Failed to publish listing';
+    }
+}
+
+async function bulkPublish() {
+    const status = document.getElementById('ebayActionStatus');
+    const selected = Array.from(document.querySelectorAll("input[data-role='publish-select']:checked"))
+        .map((el) => el.dataset.listingId)
+        .filter((listingId) => listingId && listingId !== '—');
+
+    if (selected.length === 0) {
+        status.textContent = 'Select at least one row with a listing ID for bulk publish';
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/ebay/listings/bulk-publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listing_ids: selected }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            throw new Error(data.error || 'Bulk publish failed');
+        }
+        status.textContent = `Bulk publish completed: ${data.published_count}/${data.requested_count} published`;
+    } catch (err) {
+        status.textContent = err.message || 'Bulk publish failed';
+    }
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+document.getElementById('btnLoadCards').addEventListener('click', loadCards);
+document.getElementById('btnCheckEbay').addEventListener('click', checkEbayAuth);
+document.getElementById('btnBulkPublish').addEventListener('click', bulkPublish);
+</script>
+{% endblock %}

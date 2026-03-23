@@ -1,9 +1,385 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Import ManaBox CSV</h1>
-    <form method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".csv">
-        <button type="submit">Upload</button>
-    </form>
+<div class="import-screen">
+    <h1 class="card-heading">ManaBox CSV Import</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 24px;">
+        // drop your export file — locations auto-assigned on ingest
+    </p>
+
+    <div class="card">
+        <div class="upload-zone" id="dropzone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <div class="upload-icon">📥</div>
+            <h3>Drop your CSV file here</h3>
+            <p>or <span class="browse" onclick="document.getElementById('fileInput').click()">browse</span> to select</p>
+            <input type="file" id="fileInput" name="file" accept=".csv" style="display:none;" onchange="handleFileSelect(event)">
+        </div>
+
+        <div id="progressWrap" class="progress-wrap">
+            <div class="progress-label">
+                <span id="progressState">Waiting for file...</span>
+                <span id="progressPct">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div id="importDone" class="import-done" style="display:none;">
+            Load complete. Showing preview from database.
+        </div>
+
+        <div class="stats-grid" id="statsGrid" style="display:none;">
+            <div class="stat-box">
+                <span class="stat-num green" id="statAdded">0</span>
+                <span class="stat-label">Added</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num cyan" id="statUpdated">0</span>
+                <span class="stat-label">Updated</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num amber" id="statSkipped">0</span>
+                <span class="stat-label">Skipped</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num red" id="statErrors">0</span>
+                <span class="stat-label">Errors</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" id="previewCard" style="display:none;">
+        <div class="card-title">📋 Preview — First 8 Cards</div>
+        <table class="preview-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Card Name</th>
+                    <th>Set</th>
+                    <th>Condition</th>
+                    <th>Foil</th>
+                    <th>Qty</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="previewBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-top: 16px; text-align: center;">
+        <a id="btnViewAllCards" href="/cards" class="btn btn-primary">View All Cards</a>
+    </div>
+</div>
+
+<style>
+.upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.upload-zone h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin: 0;
+}
+
+.browse {
+    color: var(--accent2);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.progress-wrap {
+    margin-top: 20px;
+}
+
+.import-done {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--accent4);
+    font-size: 12px;
+    font-family: var(--mono);
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.progress-bar {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.stat-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+}
+
+.stat-num.green { color: var(--accent4); }
+.stat-num.cyan { color: var(--accent2); }
+.stat-num.amber { color: var(--accent3); }
+.stat-num.red { color: var(--danger); }
+
+.stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    display: block;
+}
+
+.preview-table {
+    font-size: 12px;
+}
+
+.preview-table th, .preview-table td {
+    padding: 10px 12px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.badge-new { background: rgba(16, 185, 129, 0.15); color: var(--accent4); }
+.badge-updated { background: rgba(6, 182, 212, 0.15); color: var(--accent2); }
+
+.screen-sub {
+    font-size: 14px;
+    color: var(--muted);
+    font-family: var(--mono);
+}
+</style>
+
+<script>
+let progressInterval = null;
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('dropzone').classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('dropzone').classList.remove('dragover');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.getElementById('dropzone').classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('fileInput').files = files;
+        handleFileSelect({ target: { files: files } });
+    }
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file || !file.name.endsWith('.csv')) {
+        alert('Please select a CSV file');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Show progress
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('statsGrid').style.display = 'none';
+    document.getElementById('previewCard').style.display = 'none';
+    document.getElementById('importDone').style.display = 'none';
+    document.getElementById('progressState').textContent = 'Uploading and importing...';
+    document.getElementById('progressPct').textContent = '0%';
+    document.getElementById('progressFill').style.width = '0%';
+    
+    // Simulate progress
+    simulateProgress();
+    
+    // Submit form
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/inventory/import', true);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            stopProgressSimulation();
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressPct').textContent = '100%';
+            document.getElementById('progressState').textContent = 'Load complete';
+
+            try {
+                const response = JSON.parse(xhr.responseText || '{}');
+                if (!response.success) {
+                    throw new Error(response.error || 'Import failed');
+                }
+
+                renderImportSummary(response.result || {});
+            } catch (err) {
+                alert(err.message || 'Import completed but response parsing failed');
+            }
+            return;
+        }
+
+        let errorMessage = 'Upload failed';
+        stopProgressSimulation();
+        try {
+            const response = JSON.parse(xhr.responseText || '{}');
+            if (response.error) errorMessage = response.error;
+        } catch (err) {
+            // Ignore parse error and use default message.
+        }
+        document.getElementById('progressState').textContent = 'Import failed';
+        alert(errorMessage);
+    };
+    
+    xhr.onerror = function() {
+        stopProgressSimulation();
+        document.getElementById('progressState').textContent = 'Import failed';
+        alert('Upload failed');
+    };
+    
+    xhr.send(formData);
+}
+
+function renderImportSummary(result) {
+    document.getElementById('statAdded').textContent = result.added || 0;
+    document.getElementById('statUpdated').textContent = result.updated || 0;
+    document.getElementById('statSkipped').textContent = result.skipped || 0;
+    document.getElementById('statErrors').textContent = 0;
+    document.getElementById('statsGrid').style.display = 'grid';
+
+    const rows = Array.isArray(result.preview) ? result.preview : [];
+    const previewBody = document.getElementById('previewBody');
+    if (rows.length > 0) {
+        previewBody.innerHTML = rows.map((row) => {
+            const statusClass = row.status === 'added' ? 'badge-new' : 'badge-updated';
+            const statusText = row.status === 'added' ? 'New' : 'Updated';
+            return `
+                <tr>
+                    <td>${row.id || '—'}</td>
+                    <td>${escapeHtml(row.name || '—')}</td>
+                    <td>${escapeHtml(row.set_code || '—')}</td>
+                    <td>${escapeHtml(row.condition || '—')}</td>
+                    <td>${row.foil ? 'Yes' : 'No'}</td>
+                    <td>${row.quantity ?? 0}</td>
+                    <td><code>${escapeHtml(row.location_code || '—')}</code></td>
+                    <td><span class="badge ${statusClass}">${statusText}</span></td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        previewBody.innerHTML = '<tr><td colspan="8" style="color: var(--muted);">No cards available for preview.</td></tr>';
+    }
+
+    document.getElementById('previewCard').style.display = 'block';
+    document.getElementById('importDone').style.display = 'block';
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function simulateProgress() {
+    stopProgressSimulation();
+    let progress = 0;
+    progressInterval = setInterval(() => {
+        progress += Math.random() * 30;
+        if (progress > 95) progress = 95;
+        
+        document.getElementById('progressFill').style.width = progress + '%';
+        document.getElementById('progressPct').textContent = Math.floor(progress) + '%';
+        
+        if (progress >= 95) {
+            stopProgressSimulation();
+        }
+    }, 300);
+}
+
+function stopProgressSimulation() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+}
+</script>
 {% endblock %}

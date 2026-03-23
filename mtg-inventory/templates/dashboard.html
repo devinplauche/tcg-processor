@@ -1,7 +1,442 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Dashboard</h1>
-    <p>Welcome to your MTG Inventory System.</p>
-    <p>Total cards, value, and sync status will be displayed here.</p>
+<div class="dashboard-screen">
+    <h1 class="card-heading">Dashboard</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 32px;">
+        // inventory overview and quick actions
+    </p>
+
+    <!-- Quick Stats Grid -->
+    <div class="stats-grid">
+        <a class="stat-card stat-link" href="/cards" title="Open card search">
+            <div class="stat-value green" id="statTotalCards">—</div>
+            <div class="stat-tag">Total Cards</div>
+        </a>
+        <div class="stat-card">
+            <div class="stat-value cyan" id="statTotalBoxes">—</div>
+            <div class="stat-tag">Storage Boxes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value amber" id="statEstValue">—</div>
+            <div class="stat-tag">Est. Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value accent" id="statListings">—</div>
+            <div class="stat-tag">Active Listings</div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card" style="margin-top: 32px;">
+        <div class="card-title">⚡ Quick Actions</div>
+        <div class="actions-grid">
+            <a href="/inventory/import" class="action-button">
+                <div class="action-icon">📥</div>
+                <div class="action-text">
+                    <div class="action-name">Import CSV</div>
+                    <div class="action-desc">Add cards from ManaBox</div>
+                </div>
+            </a>
+            <a href="/boxes" class="action-button">
+                <div class="action-icon">📦</div>
+                <div class="action-text">
+                    <div class="action-name">View Boxes</div>
+                    <div class="action-desc">Browse and filter by box</div>
+                </div>
+            </a>
+            <a href="/ebay" class="action-button">
+                <div class="action-icon">🛒</div>
+                <div class="action-text">
+                    <div class="action-name">Create Listing</div>
+                    <div class="action-desc">Create eBay listing from inventory</div>
+                </div>
+            </a>
+            <div class="action-button" id="btnSearchCards" onclick="handleSearchCards()">
+                <div class="action-icon">🔍</div>
+                <div class="action-text">
+                    <div class="action-name">Search Cards</div>
+                    <div class="action-desc">Find in inventory</div>
+                </div>
+            </div>
+            <a href="/pricing-engine" class="action-button">
+                <div class="action-icon">📈</div>
+                <div class="action-text">
+                    <div class="action-name">Pricing Engine</div>
+                    <div class="action-desc">Run arbitrage analysis report</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-title">📋 Recent Imports</div>
+        <table class="activity-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Cards Processed</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="recentImportsBody">
+                <tr><td colspan="4" style="text-align: center; color: var(--muted);">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- System Status -->
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-title">🔧 System Status</div>
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="status-indicator ok"></div>
+                <div class="status-text">
+                    <div class="status-name">Database</div>
+                    <div class="status-detail">Connected</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator ok"></div>
+                <div class="status-text">
+                    <div class="status-name">Scryfall API</div>
+                    <div class="status-detail">Ready</div>
+                </div>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator off"></div>
+                <div class="status-text">
+                    <div class="status-name">eBay Sandbox</div>
+                    <div class="status-detail">Not configured</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-screen {
+    animation: fadeIn 0.3s ease;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.stat-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.stat-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.stat-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.stat-value.green { color: var(--accent4); }
+.stat-value.cyan { color: var(--accent2); }
+.stat-value.amber { color: var(--accent3); }
+.stat-value.accent { color: var(--accent); }
+
+.stat-tag {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.action-button:hover {
+    border-color: var(--accent);
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.action-icon {
+    font-size: 28px;
+}
+
+.action-text {
+    flex: 1;
+}
+
+.action-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.action-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.activity-table {
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+.activity-table code {
+    font-family: var(--mono);
+    font-size: 11px;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-indicator.ok { background: var(--accent4); }
+.status-indicator.pending { background: var(--accent3); animation: pulse 2s infinite; }
+.status-indicator.off { background: var(--muted); opacity: 0.5; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.status-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.status-detail {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent4);
+}
+
+.badge-info {
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent2);
+}
+</style>
+
+<script>
+async function loadDashboardData() {
+    // Load stats
+    try {
+        const statsResp = await fetch('/api/dashboard/stats');
+        const stats = await statsResp.json();
+        document.getElementById('statTotalCards').textContent = stats.total_cards.toLocaleString();
+        document.getElementById('statTotalBoxes').textContent = stats.total_boxes.toLocaleString();
+        document.getElementById('statEstValue').textContent = '$' + stats.estimated_value.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
+        document.getElementById('statListings').textContent = stats.active_listings.toLocaleString();
+    } catch (err) {
+        console.error('Failed to load stats:', err);
+    }
+
+    // Load recent imports
+    try {
+        const importsResp = await fetch('/api/dashboard/recent-imports');
+        const imports = await importsResp.json();
+        const tbody = document.getElementById('recentImportsBody');
+        
+        if (imports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--muted);">No imports yet</td></tr>';
+        } else {
+            tbody.innerHTML = imports.map(imp => {
+                const date = new Date(imp.date).toLocaleDateString('en-US');
+                const statusClass = imp.status === 'complete' ? 'badge-success' : 'badge-info';
+                const statusText = imp.status === 'complete' ? '✓ Complete' : '~ ' + imp.status;
+                return `
+                    <tr class="import-row" data-import-id="${imp.id}" style="cursor: pointer;">
+                        <td><code style="color: var(--muted);">${date}</code></td>
+                        <td>${imp.type}</td>
+                        <td><span class="badge ${statusClass}">+${imp.cards_processed}</span></td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.querySelectorAll('.import-row').forEach((row) => {
+                row.addEventListener('click', () => showImportDetails(row.dataset.importId));
+            });
+        }
+    } catch (err) {
+        console.error('Failed to load imports:', err);
+    }
+
+    // Load system status
+    try {
+        const statusResp = await fetch('/api/dashboard/system-status');
+        const status = await statusResp.json();
+        const container = document.querySelector('.status-grid');
+        
+        const statusItems = [
+            { name: 'Database', data: status.database },
+            { name: 'Scryfall API', data: status.scryfall_api },
+            { name: 'eBay Sandbox', data: status.ebay_sandbox }
+        ];
+        
+        container.innerHTML = statusItems.map(item => {
+            const indicatorClass = 
+                item.data.status === 'connected' || item.data.status === 'ready' ? 'ok' :
+                item.data.status === 'checking' ? 'pending' : 'off';
+            
+            return `
+                <div class="status-item">
+                    <div class="status-indicator ${indicatorClass}"></div>
+                    <div class="status-text">
+                        <div class="status-name">${item.name}</div>
+                        <div class="status-detail">${item.data.status}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Failed to load system status:', err);
+    }
+}
+
+// Load once on initial render.
+document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+// Reload when page is restored from browser back/forward cache.
+window.addEventListener('pageshow', function() {
+    loadDashboardData();
+});
+
+async function showImportDetails(importId) {
+    try {
+        const resp = await fetch(`/api/dashboard/recent-imports/${importId}/cards`);
+        if (!resp.ok) {
+            throw new Error('Failed to load import details');
+        }
+        const data = await resp.json();
+        const cards = Array.isArray(data.cards) ? data.cards : [];
+        const importMeta = data.import || {};
+
+        const rows = cards.length > 0
+            ? cards.map((card) => `
+                <tr>
+                    <td>${escapeHtml(card.name || '—')}</td>
+                    <td>${escapeHtml(card.set_code || '—')}</td>
+                    <td>${escapeHtml(card.condition || '—')}</td>
+                    <td>${card.quantity ?? 0}</td>
+                    <td><code>${escapeHtml(card.location_code || '—')}</code></td>
+                    <td>${escapeHtml(card.status || 'unknown')}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="6" style="text-align:center;color:var(--muted);">No card rows found for this import.</td></tr>';
+
+        showModal(
+            'Import Details',
+            `
+            <div style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">
+                Type: <code>${escapeHtml(importMeta.type || 'import')}</code> •
+                Status: <code>${escapeHtml(importMeta.status || 'unknown')}</code> •
+                Processed: <code>${importMeta.cards_processed ?? 0}</code>
+            </div>
+            <div style="max-height: 380px; overflow: auto;">
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Card</th>
+                            <th>Set</th>
+                            <th>Condition</th>
+                            <th>Qty</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            `,
+            [
+                {
+                    label: 'Close',
+                    style: 'outline',
+                    onclick: "document.querySelector('.modal-overlay').remove()"
+                }
+            ]
+        );
+    } catch (err) {
+        console.error('Failed to load import details:', err);
+        alert('Failed to load import details.');
+    }
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+</script>
 {% endblock %}

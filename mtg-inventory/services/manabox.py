@@ -16,6 +16,7 @@ def import_csv(db, file):
     added_count = 0
     updated_count = 0
     skipped_count = 0
+    status_by_scryfall_id = {}
 
     for _, row in df.iterrows():
         scryfall_id = row['scryfall_id']
@@ -32,6 +33,7 @@ def import_csv(db, file):
             card.quantity = row['quantity']
             card.condition = row['condition']
             updated_count += 1
+            status_by_scryfall_id[str(scryfall_id)] = 'updated'
         else:
             # Convert foil field: 'normal' or empty = False, 'foil' or True = True
             foil_value = row.get('foil', False)
@@ -66,7 +68,46 @@ def import_csv(db, file):
             assign_location(db, new_card)
             db.add(new_card)
             added_count += 1
+            status_by_scryfall_id[str(scryfall_id)] = 'added'
 
     db.commit()
+
+    preview = []
+    import_cards = []
+    if status_by_scryfall_id:
+        imported_cards = (
+            db.query(Card)
+            .filter(Card.scryfall_id.in_(list(status_by_scryfall_id.keys())))
+            .order_by(Card.updated_at.desc())
+            .all()
+        )
+
+        for card in imported_cards[:8]:
+            preview.append(
+                {
+                    'id': card.id,
+                    'name': card.name,
+                    'set_code': card.set_code,
+                    'condition': card.condition,
+                    'foil': bool(card.foil),
+                    'quantity': card.quantity,
+                    'location_code': card.location_code,
+                    'status': status_by_scryfall_id.get(str(card.scryfall_id), 'updated'),
+                }
+            )
+
+        import_cards = [
+            {
+                'card_id': card.id,
+                'status': status_by_scryfall_id.get(str(card.scryfall_id), 'updated'),
+            }
+            for card in imported_cards
+        ]
     
-    return {"added": added_count, "updated": updated_count, "skipped": skipped_count}
+    return {
+        "added": added_count,
+        "updated": updated_count,
+        "skipped": skipped_count,
+        "preview": preview,
+        "import_cards": import_cards,
+    }

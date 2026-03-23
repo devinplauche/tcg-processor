@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from app import app
 from database import Base, SessionLocal
-from models import Card, Box
+from models import Card, Box, SyncLog, ImportCardLink
 from routes.inventory import bp as inventory_bp
 from services.manabox import import_csv
 from services.location_engine import assign_location
@@ -354,6 +354,58 @@ class TestImportService:
         
         with pytest.raises(ValueError, match="Missing required column"):
             import_csv(db_session, csv_file)
+
+
+class TestImportAccounting:
+    """Regression tests for import count consistency and data-loss detection."""
+
+    def test_import_sync_log_and_card_links_match_processed_counts(self, client, db_session):
+        """cards_processed should equal added+updated+skipped and links should match added+updated."""
+        csv_file = create_test_csv(
+            {
+                'Name': ['Path to Exile', 'Lightning Bolt', 'Counterspell'],
+                'Set code': ['SLD', 'LEA', 'LEA'],
+                'Set name': ['Secret Lair Drop', 'Limited Edition Alpha', 'Limited Edition Alpha'],
+                'Collector number': ['226', '244', '055'],
+                'Foil': ['normal', 'normal', 'normal'],
+                'Rarity': ['rare', 'common', 'common'],
+                'Quantity': [1, 2, 3],
+                'ManaBox ID': ['64698', '12345', '88888'],
+                'Scryfall ID': [
+                    '4e2fe951-4820-4555-8cee-621c66ed8620',
+                    'c8d672ba-83bd-4bf0-b8f4-5eb382f16a62',
+                    '7f73f4eb-8c1f-4f0f-a3ea-0d530e2a8f4b',
+                ],
+                'Purchase price': [15.27, 5.00, 1.50],
+                'Condition': ['near_mint', 'good', 'good'],
+                'Language': ['en', 'en', 'en'],
+            }
+        )
+
+        response = client.post(
+            '/inventory/import',
+            data={'file': (csv_file, 'test.csv')},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        latest_sync = db_session.query(SyncLog).order_by(SyncLog.id.desc()).first()
+        assert latest_sync is not None
+
+        added = 3
+        updated = 0
+        skipped = 0
+
+        assert latest_sync.cards_processed == added + updated + skipped
+
+        linked_cards_count = (
+            db_session.query(ImportCardLink)
+            .filter(ImportCardLink.sync_log_id == latest_sync.id)
+            .count()
+        )
+        assert linked_cards_count == added + updated
+
+        assert db_session.query(Card).count() == added
 
 
 if __name__ == '__main__':

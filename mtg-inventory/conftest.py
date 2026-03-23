@@ -132,28 +132,6 @@ def api_response_templates():
                 'normal': 'https://...',
             }
         },
-        'tcgplayer_auth': {
-            'success': True,
-            'data': {
-                'token': 'test_token_xyz',
-                'user_id': 12345,
-            }
-        },
-        'tcgplayer_pricing': {
-            'success': True,
-            'data': {
-                'productId': 123456,
-                'lowestListing': {
-                    'price': 10.50,
-                    'quantity': 5,
-                },
-                'lowestListingFoil': {
-                    'price': 25.00,
-                    'quantity': 2,
-                },
-                'average': 12.75,
-            }
-        },
         'ebay_access_token': {
             'access_token': 'test_access_token_abc123',
             'token_type': 'Bearer',
@@ -179,8 +157,6 @@ def mock_config():
         
         # API Credentials (empty/test for mocking)
         mock.SCRYFALL_API = 'https://api.scryfall.com'
-        mock.TCGPLAYER_API_KEY = 'test_key'
-        mock.TCGPLAYER_API_SECRET = 'test_secret'
         mock.EBAY_CLIENT_ID = 'test_client_id'
         mock.EBAY_CLIENT_SECRET = 'test_client_secret'
         mock.EBAY_REFRESH_TOKEN = 'test_refresh_token'

@@ -13,7 +13,7 @@ import pandas as pd
 
 from services.manabox import import_csv
 from services.location_engine import assign_location
-from services.scryfall_api import ScryfallAPI, TCGPlayerAPI, eBayAPI
+from services.scryfall_api import ScryfallAPI, eBayAPI
 from models import Card, Box
 from database import Base, SessionLocal
 from sqlalchemy import create_engine
@@ -109,112 +109,6 @@ class TestScryfallAPI:
         
         assert len(result) == 5
 
-
-# ========================
-# TCGPLAYER API TESTS
-# ========================
-
-class TestTCGPlayerAPI:
-    """Tests for TCGPlayer API client"""
-    
-    @patch('services.scryfall_api.requests.post')
-    def test_get_auth_token_success(self, mock_post):
-        """Test successful authentication"""
-        with patch('services.scryfall_api.Config') as mock_config:
-            mock_config.TCGPLAYER_API_KEY = 'test_key'
-            mock_config.TCGPLAYER_API_SECRET = 'test_secret'
-            
-            mock_post.return_value.json.return_value = {
-                'success': True,
-                'data': {'token': 'test_token_123'}
-            }
-            mock_post.return_value.raise_for_status.return_value = None
-            
-            api = TCGPlayerAPI()
-            token = api.get_auth_token()
-            
-            assert token == 'test_token_123'
-            mock_post.assert_called_once()
-    
-    @patch('services.scryfall_api.requests.post')
-    def test_get_auth_token_no_credentials(self, mock_post):
-        """Test auth token when credentials are missing"""
-        with patch('services.scryfall_api.Config') as mock_config:
-            mock_config.TCGPLAYER_API_KEY = None
-            mock_config.TCGPLAYER_API_SECRET = None
-            
-            api = TCGPlayerAPI()
-            token = api.get_auth_token()
-            
-            assert token is None
-            mock_post.assert_not_called()
-    
-    @patch('services.scryfall_api.requests.get')
-    @patch('services.scryfall_api.requests.post')
-    def test_get_product_id(self, mock_post, mock_get):
-        """Test getting TCGPlayer product ID"""
-        with patch('services.scryfall_api.Config') as mock_config:
-            mock_config.TCGPLAYER_API_KEY = 'test_key'
-            mock_config.TCGPLAYER_API_SECRET = 'test_secret'
-            
-            # Mock auth
-            mock_post.return_value.json.return_value = {
-                'success': True,
-                'data': {'token': 'test_token'}
-            }
-            mock_post.return_value.raise_for_status.return_value = None
-            
-            # Mock product search
-            mock_get.return_value.json.return_value = {
-                'results': [{'productId': 12345}]
-            }
-            mock_get.return_value.raise_for_status.return_value = None
-            
-            api = TCGPlayerAPI()
-            product_id = api.get_product_id('Path to Exile')
-            
-            assert product_id == 12345
-    
-    @patch('services.scryfall_api.requests.get')
-    @patch('services.scryfall_api.requests.post')
-    def test_get_pricing(self, mock_post, mock_get):
-        """Test getting product pricing"""
-        with patch('services.scryfall_api.Config') as mock_config:
-            mock_config.TCGPLAYER_API_KEY = 'test_key'
-            mock_config.TCGPLAYER_API_SECRET = 'test_secret'
-            
-            # Mock auth
-            mock_post.return_value.json.return_value = {
-                'success': True,
-                'data': {'token': 'test_token'}
-            }
-            mock_post.return_value.raise_for_status.return_value = None
-            
-            # Mock pricing call
-            def get_side_effect(*args, **kwargs):
-                response = Mock()
-                if 'pricing' in args[0]:
-                    response.json.return_value = {
-                        'success': True,
-                        'data': {
-                            'averagePrice': 15.99,
-                            'lowestPrice': 12.50,
-                            'highestPrice': 19.99
-                        }
-                    }
-                else:
-                    response.json.return_value = {'results': []}
-                response.raise_for_status.return_value = None
-                return response
-            
-            mock_get.side_effect = get_side_effect
-            
-            api = TCGPlayerAPI()
-            api._token = 'test_token'
-            pricing = api.get_pricing(12345)
-            
-            assert pricing is not None
-            assert pricing['averagePrice'] == 15.99
 
 
 # ========================

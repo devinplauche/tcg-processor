@@ -11,6 +11,7 @@ pytest>=7.0
 pytest-cov>=3.0
 vcrpy>=4.1  # Record/playback HTTP interactions
 responses>=0.20  # Mock requests library
+selenium>=4.20
 
 # Resilience & Rate Limiting
 tenacity>=8.0  # Retry logic with exponential backoff

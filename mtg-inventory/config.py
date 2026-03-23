@@ -10,11 +10,8 @@ class Config:
     BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
     
     # eBay API Config
+    EBAY_DEV_ID = os.getenv("EBAY_DEV_ID")
     EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID")
     EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET")
     EBAY_REFRESH_TOKEN = os.getenv("EBAY_REFRESH_TOKEN")
     EBAY_SANDBOX_MODE = os.getenv("EBAY_SANDBOX_MODE", "True").lower() in ('true', '1', 't')
-
-    # TCGPlayer API Config
-    TCGPLAYER_API_KEY = os.getenv("TCGPLAYER_API_KEY")
-    TCGPLAYER_API_SECRET = os.getenv("TCGPLAYER_API_SECRET")

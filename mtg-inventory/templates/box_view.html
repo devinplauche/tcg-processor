@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="boxes-screen">
+    <h1 class="card-heading">Storage Boxes</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 24px;">
+        // click a box to open card search filtered to that box
+    </p>
+
+    <div class="card">
+        <div class="card-title">📦 Your Boxes</div>
+        <div id="boxesGrid" class="boxes-grid">
+            <div class="box-card loading">Loading boxes...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+.boxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.box-card {
+    display: block;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s ease;
+}
+
+.box-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.box-card.loading,
+.box-card.empty {
+    cursor: default;
+    color: var(--muted);
+}
+
+.box-card.loading:hover,
+.box-card.empty:hover {
+    border-color: var(--border);
+    transform: none;
+}
+
+.box-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.box-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.box-bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--surface);
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.box-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+}
+</style>
+
+<script>
+async function loadBoxes() {
+    const grid = document.getElementById('boxesGrid');
+    try {
+        const resp = await fetch('/api/boxes');
+        const boxes = await resp.json();
+
+        if (!Array.isArray(boxes) || boxes.length === 0) {
+            grid.innerHTML = '<div class="box-card empty">No boxes found yet. Import cards to generate box assignments.</div>';
+            return;
+        }
+
+        grid.innerHTML = boxes.map((box) => {
+            const capacity = box.capacity || 0;
+            const count = box.current_count || 0;
+            const percent = capacity > 0 ? Math.min(100, Math.round((count / capacity) * 100)) : 0;
+            return `
+                <a class="box-card" href="/cards?box=${box.box_number}">
+                    <div class="box-name">BOX-${String(box.box_number).padStart(4, '0')}</div>
+                    <div class="box-meta">${count} / ${capacity} slots used</div>
+                    <div class="box-meta">${box.card_rows || 0} card rows</div>
+                    <div class="box-bar"><div class="box-fill" style="width: ${percent}%;"></div></div>
+                </a>
+            `;
+        }).join('');
+    } catch (err) {
+        grid.innerHTML = '<div class="box-card empty">Failed to load boxes.</div>';
+        console.error('Failed to load boxes:', err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadBoxes);
+</script>
+{% endblock %}

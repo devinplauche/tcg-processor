@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-heading">Pricing Engine</h1>
+    <p class="screen-sub" style="font-family: var(--mono); color: var(--muted); margin-bottom: 20px;">
+        // run and display results from MTGJSON-analysis/find_arbitrage.py
+    </p>
+
+    <div style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap;">
+        <div class="form-group" style="max-width: 260px; margin-bottom: 0;">
+            <label for="condition" class="form-label">Condition (optional)</label>
+            <select id="condition" class="form-select">
+                <option value="">Default (Conservative)</option>
+                <option value="NM">NM</option>
+                <option value="EX">EX</option>
+                <option value="LP">LP</option>
+                <option value="VG">VG</option>
+                <option value="MP">MP</option>
+                <option value="G">G</option>
+                <option value="HP">HP</option>
+                <option value="COMPARE">COMPARE</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" id="btnRun">Run Pricing Engine</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">Structured Results</div>
+    <div id="runMeta" style="font-family: var(--mono); font-size: 12px; color: var(--muted); margin-bottom: 10px;">Not run yet</div>
+    <div style="overflow-x: auto;">
+        <table id="pricingResultsTable">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Card</th>
+                    <th>Set</th>
+                    <th>#</th>
+                    <th>Source</th>
+                    <th>Retail</th>
+                    <th>CK Listed</th>
+                    <th>CK Payout</th>
+                    <th>Profit</th>
+                    <th>Margin</th>
+                </tr>
+            </thead>
+            <tbody id="pricingResultsBody">
+                <tr>
+                    <td><img class="pricing-card-image" src="" alt="placeholder" style="width:48px;height:68px;opacity:0;" /></td>
+                    <td colspan="9" style="text-align:center;color:var(--muted);">Click "Run Pricing Engine"</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">Raw Script Output</div>
+    <pre id="output" style="white-space: pre-wrap; font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; min-height: 180px;">Click "Run Pricing Engine" to execute find_arbitrage.py.</pre>
+</div>
+
+<script>
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function runPricingEngine() {
+    const condition = document.getElementById('condition').value;
+    const output = document.getElementById('output');
+    const meta = document.getElementById('runMeta');
+    const resultsBody = document.getElementById('pricingResultsBody');
+
+    meta.textContent = 'Running...';
+    output.textContent = 'Executing find_arbitrage.py...';
+    resultsBody.innerHTML = '<tr><td><img class="pricing-card-image" src="" alt="loading" style="width:48px;height:68px;opacity:0;" /></td><td colspan="9" style="text-align:center;color:var(--muted);">Loading...</td></tr>';
+
+    const query = condition ? `?condition=${encodeURIComponent(condition)}` : '';
+
+    try {
+        const [structuredResp, rawResp] = await Promise.all([
+            fetch(`/api/pricing-engine/data${query}`),
+            fetch(`/api/pricing-engine/run${query}`),
+        ]);
+        const structured = await structuredResp.json();
+        const raw = await rawResp.json();
+
+        if (!structuredResp.ok || !structured.success) {
+            throw new Error(structured.error || 'Failed to load structured results');
+        }
+
+        const opportunities = Array.isArray(structured.opportunities) ? structured.opportunities : [];
+        const summary = structured.summary || {};
+        meta.textContent = `Condition=${structured.condition || 'DEFAULT'} | Opportunities=${summary.total_opportunities || 0} | TotalProfit=$${Number(summary.total_profit || 0).toFixed(2)} | AvgMargin=${Number(summary.avg_margin || 0).toFixed(1)}%`;
+
+        if (opportunities.length === 0) {
+            resultsBody.innerHTML = '<tr><td><img class="pricing-card-image" src="" alt="empty" style="width:48px;height:68px;opacity:0;" /></td><td colspan="9" style="text-align:center;color:var(--muted);">No opportunities found for selected condition.</td></tr>';
+        } else {
+            resultsBody.innerHTML = opportunities.map((opp) => {
+                const imgSrc = opp.image_url || '';
+                const imageCell = imgSrc
+                    ? `<img class="pricing-card-image" src="${escapeHtml(imgSrc)}" alt="${escapeHtml(opp.name)}" style="width:48px;height:68px;object-fit:cover;border-radius:6px;border:1px solid var(--border);" />`
+                    : '<div class="pricing-card-image" style="width:48px;height:68px;border-radius:6px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;">N/A</div>';
+
+                return `
+                    <tr>
+                        <td>${imageCell}</td>
+                        <td>${escapeHtml(opp.name || 'Unknown')}</td>
+                        <td>${escapeHtml(opp.set || '?')}</td>
+                        <td>${escapeHtml(opp.number || '?')}</td>
+                        <td>${escapeHtml(opp.retail_source || '?')}</td>
+                        <td>$${Number(opp.retail_price || 0).toFixed(2)}</td>
+                        <td>$${Number(opp.ck_listed || 0).toFixed(2)}</td>
+                        <td>$${Number(opp.ck_payout || 0).toFixed(2)}</td>
+                        <td>$${Number(opp.profit || 0).toFixed(2)}</td>
+                        <td>${Number(opp.margin || 0).toFixed(1)}%</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        output.textContent = raw.stdout || '(No stdout output)';
+        if (raw.stderr) {
+            output.textContent += `\n\n[stderr]\n${raw.stderr}`;
+        }
+    } catch (err) {
+        meta.textContent = 'Run failed';
+        output.textContent = err.message || 'Failed to execute pricing engine';
+        resultsBody.innerHTML = '<tr><td><img class="pricing-card-image" src="" alt="error" style="width:48px;height:68px;opacity:0;" /></td><td colspan="9" style="text-align:center;color:var(--danger);">Failed to load pricing results.</td></tr>';
+    }
+}
+
+document.getElementById('btnRun').addEventListener('click', runPricingEngine);
+</script>
+{% endblock %}

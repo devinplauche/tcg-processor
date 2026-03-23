@@ -4,19 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTG Inventory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <nav>
-        <a href="/">Dashboard</a>
-        <a href="/inventory/import">Import CSV</a>
+    <nav class="app-nav">
+        <div class="nav-logo">MTG<span>.</span>INV</div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/cards" class="nav-link">Cards</a>
+            <a href="/inventory/import" class="nav-link">Import CSV</a>
+            <a href="/ebay" class="nav-link">eBay</a>
+            <a href="/pricing-engine" class="nav-link">Pricing Engine</a>
+        </div>
     </nav>
-    <main>
+    <main class="app-main">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flashes">
+                <div class="message-container">
                 {% for category, message in messages %}
-                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                    <div class="message message-{{ category }}">{{ message }}</div>
                 {% endfor %}
                 </div>
             {% endif %}
