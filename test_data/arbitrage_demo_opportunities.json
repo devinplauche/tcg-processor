@@ -1,0 +1,354 @@
+[
+  {
+    "card": {
+      "name": "Path to Exile",
+      "edition": "Modern Masters 2017",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 10.5
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 12.5
+    },
+    "profit": {
+      "per_unit": 1.0,
+      "margin_percent": 9.5
+    },
+    "quantity_available": 10,
+    "total_profit_potential": 10.0
+  },
+  {
+    "card": {
+      "name": "Path to Exile",
+      "edition": "Modern Masters 2017",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 10.5
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 12.5
+    },
+    "profit": {
+      "per_unit": 1.0,
+      "margin_percent": 9.5
+    },
+    "quantity_available": 10,
+    "total_profit_potential": 10.0
+  },
+  {
+    "card": {
+      "name": "Path to Exile",
+      "edition": "Modern Masters 2017",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 10.5
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 12.5
+    },
+    "profit": {
+      "per_unit": 1.0,
+      "margin_percent": 9.5
+    },
+    "quantity_available": 10,
+    "total_profit_potential": 10.0
+  },
+  {
+    "card": {
+      "name": "Path to Exile",
+      "edition": "Modern Masters 2017",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 10.5
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 12.5
+    },
+    "profit": {
+      "per_unit": 1.0,
+      "margin_percent": 9.5
+    },
+    "quantity_available": 10,
+    "total_profit_potential": 10.0
+  },
+  {
+    "card": {
+      "name": "Tarmogoyf",
+      "edition": "Future Sight",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 22.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 25.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 9.1
+    },
+    "quantity_available": 3,
+    "total_profit_potential": 6.0
+  },
+  {
+    "card": {
+      "name": "Tarmogoyf",
+      "edition": "Future Sight",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 22.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 25.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 9.1
+    },
+    "quantity_available": 3,
+    "total_profit_potential": 6.0
+  },
+  {
+    "card": {
+      "name": "Tarmogoyf",
+      "edition": "Future Sight",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 22.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 25.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 9.1
+    },
+    "quantity_available": 3,
+    "total_profit_potential": 6.0
+  },
+  {
+    "card": {
+      "name": "Tarmogoyf",
+      "edition": "Future Sight",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 22.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 25.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 9.1
+    },
+    "quantity_available": 3,
+    "total_profit_potential": 6.0
+  },
+  {
+    "card": {
+      "name": "Dark Confidant",
+      "edition": "Ravnica",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 32.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 35.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 6.2
+    },
+    "quantity_available": 1,
+    "total_profit_potential": 2.0
+  },
+  {
+    "card": {
+      "name": "Dark Confidant",
+      "edition": "Ravnica",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 32.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 35.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 6.2
+    },
+    "quantity_available": 1,
+    "total_profit_potential": 2.0
+  },
+  {
+    "card": {
+      "name": "Dark Confidant",
+      "edition": "Ravnica",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 32.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 35.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 6.2
+    },
+    "quantity_available": 1,
+    "total_profit_potential": 2.0
+  },
+  {
+    "card": {
+      "name": "Dark Confidant",
+      "edition": "Ravnica",
+      "condition": "NM",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 32.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 35.0
+    },
+    "profit": {
+      "per_unit": 2.0,
+      "margin_percent": 6.2
+    },
+    "quantity_available": 1,
+    "total_profit_potential": 2.0
+  },
+  {
+    "card": {
+      "name": "Temporal Manipulation",
+      "edition": "Urza's Saga",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 80.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 85.0
+    },
+    "profit": {
+      "per_unit": 4.0,
+      "margin_percent": 5.0
+    },
+    "quantity_available": 2,
+    "total_profit_potential": 8.0
+  },
+  {
+    "card": {
+      "name": "Temporal Manipulation",
+      "edition": "Urza's Saga",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 80.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 85.0
+    },
+    "profit": {
+      "per_unit": 4.0,
+      "margin_percent": 5.0
+    },
+    "quantity_available": 2,
+    "total_profit_potential": 8.0
+  },
+  {
+    "card": {
+      "name": "Temporal Manipulation",
+      "edition": "Urza's Saga",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 80.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 85.0
+    },
+    "profit": {
+      "per_unit": 4.0,
+      "margin_percent": 5.0
+    },
+    "quantity_available": 2,
+    "total_profit_potential": 8.0
+  },
+  {
+    "card": {
+      "name": "Temporal Manipulation",
+      "edition": "Urza's Saga",
+      "condition": "LP",
+      "foil": false
+    },
+    "source": {
+      "vendor": "Sample Cardkingdom",
+      "price": 80.0
+    },
+    "destination": {
+      "vendor": "Atomic Empire",
+      "price": 85.0
+    },
+    "profit": {
+      "per_unit": 4.0,
+      "margin_percent": 5.0
+    },
+    "quantity_available": 2,
+    "total_profit_potential": 8.0
+  }
+]

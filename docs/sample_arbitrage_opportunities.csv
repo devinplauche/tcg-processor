@@ -1,0 +1,14 @@
+card_name,edition,condition,foil,source_vendor,buy_price,destination_vendor,sell_price,profit_per_unit,profit_margin,quantity_available,total_profit_potential
+Black Lotus,Alpha,NM,False,CardKingdom,$1450.00,Atomic Empire,$1500.00,$50.00,3.4%,0,$0.00
+Lightning Bolt,Beta,NM,False,CardKingdom,$43.00,Atomic Empire,$45.00,$2.00,4.7%,5,$10.00
+Lightning Bolt,Beta,NM,False,Atomic Empire,$45.00,CardKingdom,$43.00,-$4.50,-10.0%,5,-$22.50
+Tarmogoyf,Future Sight,LP,False,CardKingdom,$22.00,Atomic Empire,$25.00,$3.00,13.6%,3,$9.00
+Path to Exile,Modern Masters 2017,NM,False,CardKingdom,$10.50,Atomic Empire,$12.50,$2.00,19.0%,10,$20.00
+Snapcaster Mage,Innistrad,NM,False,CardKingdom,$58.00,Atomic Empire,$60.00,$2.00,3.4%,2,$4.00
+Snapcaster Mage,Innistrad,NM,False,Atomic Empire,$60.00,CardKingdom,$58.00,-$4.50,-7.5%,2,-$9.00
+Jace the Mind Sculptor,Zendikar,NM,False,CardKingdom,$72.00,Atomic Empire,$75.00,$3.00,4.2%,1,$3.00
+Liliana of the Veil,Innistrad,NM,False,CardKingdom,$42.00,Atomic Empire,$45.00,$3.00,7.1%,5,$15.00
+Liliana of the Veil,Innistrad,NM,False,Atomic Empire,$45.00,CardKingdom,$42.00,-$5.50,-12.2%,5,-$27.50
+Dark Confidant,Ravnica,NM,False,CardKingdom,$32.00,Atomic Empire,$35.00,$3.00,9.4%,1,$3.00
+Stoneforge Mystic,Worldwake,NM,False,CardKingdom,$23.00,Atomic Empire,$25.00,$2.00,8.7%,6,$12.00
+Temporal Manipulation,Urza's Saga,LP,False,CardKingdom,$80.00,Atomic Empire,$85.00,$5.00,6.3%,2,$10.00

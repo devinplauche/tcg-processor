@@ -1,0 +1,1020 @@
+openapi: 3.0.0
+info:
+  title: MTG Inventory API
+  description: RESTful API for managing Magic: The Gathering card inventory
+  version: 0.1.0
+  contact:
+    name: MTG Inventory Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api.mtg-inventory.com
+    description: Production server
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Verify API is online and database is connected
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  database:
+                    type: string
+                    example: "connected"
+                  version:
+                    type: string
+                    example: "0.1.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime_seconds:
+                    type: integer
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/cards/search:
+    get:
+      summary: Search cards
+      description: Search for cards by name, set, condition, and price range
+      operationId: searchCards
+      tags:
+        - Cards
+      parameters:
+        - name: q
+          in: query
+          description: Search query (minimum 2 characters)
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: limit
+          in: query
+          description: Result limit (default 10, max 100)
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            default: 0
+        - name: set
+          in: query
+          description: Filter by set code (e.g., MH2, INN)
+          schema:
+            type: string
+        - name: foil
+          in: query
+          description: Filter by foil status
+          schema:
+            type: boolean
+        - name: condition
+          in: query
+          description: Filter by condition
+          schema:
+            type: string
+            enum: [NM, LP, MP, HP, PO]
+        - name: min_price
+          in: query
+          description: Minimum price filter
+          schema:
+            type: number
+            format: float
+        - name: max_price
+          in: query
+          description: Maximum price filter
+          schema:
+            type: number
+            format: float
+      responses:
+        '200':
+          description: Search successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/cards/{id}:
+    get:
+      summary: Get card details
+      description: Get detailed information about a specific card
+      operationId: getCard
+      tags:
+        - Cards
+      parameters:
+        - name: id
+          in: path
+          description: Card ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Card found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Card'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Update card
+      description: Update card information (requires authentication)
+      operationId: updateCard
+      tags:
+        - Cards
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardUpdate'
+      responses:
+        '200':
+          description: Card updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Card'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Delete card
+      description: Delete a card from inventory (requires admin authentication)
+      operationId: deleteCard
+      tags:
+        - Cards
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Card deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/cards:
+    get:
+      summary: List all cards
+      description: Get all cards with pagination and filtering
+      operationId: listCards
+      tags:
+        - Cards
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: created_at
+            enum: [created_at, name, price, condition]
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: desc
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Cards listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardListResponse'
+
+  /inventory/import:
+    post:
+      summary: Import CSV
+      description: Upload and import a CSV file from ManaBox
+      operationId: importCSV
+      tags:
+        - Inventory
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/boxes:
+    get:
+      summary: List all boxes
+      description: Get all storage boxes with statistics
+      operationId: listBoxes
+      tags:
+        - Locations
+      parameters:
+        - name: include_cards
+          in: query
+          description: Include card list in response
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Boxes listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxListResponse'
+
+  /api/boxes/{id}:
+    get:
+      summary: Get box details
+      description: Get specific box with all contained cards
+      operationId: getBox
+      tags:
+        - Locations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, slot, created_at]
+      responses:
+        '200':
+          description: Box found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/boxes/{id}/qr:
+    post:
+      summary: Generate QR code
+      description: Generate or regenerate QR code for a box
+      operationId: generateBoxQR
+      tags:
+        - Locations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: QR code generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      qr_code_url:
+                        type: string
+                      generated_at:
+                        type: string
+                        format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/pricing/{scryfall_id}:
+    get:
+      summary: Get card pricing
+      description: Get current market pricing from TCGPlayer
+      operationId: getPricing
+      tags:
+        - Pricing
+      parameters:
+        - name: scryfall_id
+          in: path
+          description: Scryfall card ID (UUID)
+          required: true
+          schema:
+            type: string
+        - name: condition
+          in: query
+          description: Card condition
+          schema:
+            type: string
+            enum: [NM, LP, MP, HP, PO]
+      responses:
+        '200':
+          description: Pricing found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/pricing/refresh:
+    post:
+      summary: Refresh all prices
+      description: Queue price refresh job for all cards
+      operationId: refreshPrices
+      tags:
+        - Pricing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  default: 100
+                force:
+                  type: boolean
+                  default: false
+      responses:
+        '202':
+          description: Refresh job queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      job_id:
+                        type: string
+                      cards_to_update:
+                        type: integer
+                      estimated_time_seconds:
+                        type: integer
+                      status_url:
+                        type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/ebay/listings:
+    get:
+      summary: List eBay listings
+      description: Get all eBay listings
+      operationId: listEBayListings
+      tags:
+        - eBay
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, ended, sold]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Listings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EBayListingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create listing
+      description: Create a new eBay listing for a card
+      operationId: createEBayListing
+      tags:
+        - eBay
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EBayListingCreate'
+      responses:
+        '201':
+          description: Listing created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/EBayListing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/ebay/listings/{id}:
+    put:
+      summary: Update listing
+      description: Update an existing eBay listing
+      operationId: updateEBayListing
+      tags:
+        - eBay
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price:
+                  type: number
+                  format: float
+                quantity:
+                  type: integer
+      responses:
+        '200':
+          description: Listing updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/EBayListing'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Delete listing
+      description: End/delete an eBay listing
+      operationId: deleteEBayListing
+      tags:
+        - eBay
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Listing deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+        scryfall_id:
+          type: string
+          format: uuid
+        manabox_id:
+          type: string
+        name:
+          type: string
+        set_code:
+          type: string
+        set_name:
+          type: string
+        collector_number:
+          type: string
+        foil:
+          type: boolean
+        rarity:
+          type: string
+          enum: [common, uncommon, rare, mythic]
+        quantity:
+          type: integer
+        condition:
+          type: string
+          enum: [NM, LP, MP, HP, PO]
+        language:
+          type: string
+        purchase_price:
+          type: number
+          format: float
+        location_code:
+          type: string
+        box_number:
+          type: integer
+        slot_number:
+          type: integer
+        list_on_ebay:
+          type: boolean
+        ebay_listing_id:
+          type: string
+        tcgplayer_product_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CardUpdate:
+      type: object
+      properties:
+        condition:
+          type: string
+          enum: [NM, LP, MP, HP, PO]
+        foil:
+          type: boolean
+        quantity:
+          type: integer
+        purchase_price:
+          type: number
+          format: float
+        list_on_ebay:
+          type: boolean
+
+    CardSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            has_more:
+              type: boolean
+
+    CardListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            has_more:
+              type: boolean
+            pages:
+              type: integer
+
+    ImportResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            filename:
+              type: string
+            added:
+              type: integer
+            updated:
+              type: integer
+            skipped:
+              type: integer
+            errors:
+              type: integer
+            total_processed:
+              type: integer
+            processing_time_ms:
+              type: integer
+        message:
+          type: string
+
+    Box:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: integer
+        capacity:
+          type: integer
+        current_count:
+          type: integer
+        fill_percentage:
+          type: number
+          format: float
+        qr_code_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    BoxListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Box'
+        statistics:
+          type: object
+          properties:
+            total_boxes:
+              type: integer
+            total_capacity:
+              type: integer
+            total_cards:
+              type: integer
+            average_fill:
+              type: number
+              format: float
+
+    BoxDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Box'
+            - type: object
+              properties:
+                cards:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Card'
+                pagination:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                    limit:
+                      type: integer
+                    offset:
+                      type: integer
+                    has_more:
+                      type: boolean
+
+    Pricing:
+      type: object
+      properties:
+        scryfall_id:
+          type: string
+          format: uuid
+        card_name:
+          type: string
+        prices:
+          type: object
+          properties:
+            market_price:
+              type: number
+              format: float
+            low_price:
+              type: number
+              format: float
+            high_price:
+              type: number
+              format: float
+            currency:
+              type: string
+        fetched_at:
+          type: string
+          format: date-time
+
+    PricingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Pricing'
+
+    EBayListing:
+      type: object
+      properties:
+        id:
+          type: string
+        card_id:
+          type: integer
+        card_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [draft, active, ended, sold]
+        quantity:
+          type: integer
+        condition_id:
+          type: integer
+        url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EBayListingCreate:
+      type: object
+      required:
+        - card_id
+        - price
+        - quantity
+        - condition_id
+        - category_id
+      properties:
+        card_id:
+          type: integer
+        price:
+          type: number
+          format: float
+          minimum: 0
+        quantity:
+          type: integer
+          minimum: 1
+        condition_id:
+          type: integer
+        category_id:
+          type: string
+        duration:
+          type: integer
+          default: 30
+        auto_decline_below:
+          type: number
+          format: float
+        shipping_type:
+          type: string
+          enum: [flat, calculated]
+          default: flat
+        shipping_cost:
+          type: number
+          format: float
+        return_days:
+          type: integer
+
+    EBayListingListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EBayListing'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            has_more:
+              type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            status:
+              type: integer
+            timestamp:
+              type: string
+              format: date-time
+            request_id:
+              type: string
+            details:
+              type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    RateLimited:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ServiceUnavailable:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication (coming soon)
+
+tags:
+  - name: System
+    description: System health and status
+  - name: Cards
+    description: Card inventory management
+  - name: Inventory
+    description: Bulk operations
+  - name: Locations
+    description: Storage box management
+  - name: Pricing
+    description: Market pricing
+  - name: eBay
+    description: eBay integration

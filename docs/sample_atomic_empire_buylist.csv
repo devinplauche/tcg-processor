@@ -1,0 +1,11 @@
+name,edition,condition,foil,buy_price,quantity_available,product_url,vendor
+Black Lotus,Alpha,NM,False,1500.00,1,https://www.atomicempire.com/item/123456,Atomic Empire
+Lightning Bolt,Beta,NM,False,45.00,5,https://www.atomicempire.com/item/123457,Atomic Empire
+Path to Exile,Modern Masters 2017,NM,False,12.50,3,https://www.atomicempire.com/item/123458,Atomic Empire
+Tarmogoyf,Future Sight,LP,False,25.00,2,https://www.atomicempire.com/item/123459,Atomic Empire
+Snapcaster Mage,Innistrad,NM,False,60.00,1,https://www.atomicempire.com/item/123460,Atomic Empire
+Jace the Mind Sculptor,Zendikar,NM,False,75.00,2,https://www.atomicempire.com/item/123461,Atomic Empire
+Liliana of the Veil,Innistrad,NM,False,45.00,3,https://www.atomicempire.com/item/123462,Atomic Empire
+Dark Confidant,Ravnica,NM,False,35.00,1,https://www.atomicempire.com/item/123463,Atomic Empire
+Stoneforge Mystic,Worldwake,NM,False,25.00,4,https://www.atomicempire.com/item/123464,Atomic Empire
+Temporal Manipulation,Urza's Saga,LP,False,85.00,1,https://www.atomicempire.com/item/123465,Atomic Empire

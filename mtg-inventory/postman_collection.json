@@ -1,0 +1,516 @@
+{
+  "info": {
+    "_postman_id": "mtg-inventory-api",
+    "name": "MTG Inventory API",
+    "description": "MTG Inventory System API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Verify API is online and database connected"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cards",
+      "item": [
+        {
+          "name": "Search Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cards/search?q=Ragavan&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cards", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Ragavan",
+                  "description": "Search query (min 2 chars)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Result limit (default 10, max 100)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "disabled": true
+                },
+                {
+                  "key": "set",
+                  "value": "MH2",
+                  "disabled": true
+                },
+                {
+                  "key": "foil",
+                  "value": "false",
+                  "disabled": true
+                },
+                {
+                  "key": "condition",
+                  "value": "NM",
+                  "disabled": true
+                },
+                {
+                  "key": "min_price",
+                  "value": "10.00",
+                  "disabled": true
+                },
+                {
+                  "key": "max_price",
+                  "value": "100.00",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Search cards by name, set, condition, price"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Card by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cards/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cards", "1"]
+            },
+            "description": "Get detailed card information"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cards?limit=20&offset=0&sort=created_at&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cards"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "List all cards with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Card",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"LP\",\n  \"foil\": true,\n  \"quantity\": 2,\n  \"purchase_price\": 45.00,\n  \"list_on_ebay\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cards/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cards", "1"]
+            },
+            "description": "Update card information (requires auth)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Card",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cards/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "cards", "1"]
+            },
+            "description": "Delete a card from inventory (requires admin auth)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Import CSV",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/inventory/import",
+              "host": ["{{base_url}}"],
+              "path": ["inventory", "import"]
+            },
+            "description": "Upload and import CSV from ManaBox"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "List All Boxes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/boxes?include_cards=false&limit=50&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "boxes"],
+              "query": [
+                {
+                  "key": "include_cards",
+                  "value": "false"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get all storage boxes with statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Box Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/boxes/1?limit=20&offset=0&sort=slot",
+              "host": ["{{base_url}}"],
+              "path": ["api", "boxes", "1"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "sort",
+                  "value": "slot",
+                  "description": "slot, name, or created_at"
+                }
+              ]
+            },
+            "description": "Get specific box with all contained cards"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Box QR Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/boxes/1/qr",
+              "host": ["{{base_url}}"],
+              "path": ["api", "boxes", "1", "qr"]
+            },
+            "description": "Generate QR code for box (requires auth)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "item": [
+        {
+          "name": "Get Card Pricing",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/pricing/uuid-1234?condition=NM",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pricing", "uuid-1234"],
+              "query": [
+                {
+                  "key": "condition",
+                  "value": "NM"
+                }
+              ]
+            },
+            "description": "Get current market pricing from TCGPlayer"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh All Prices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limit\": 100,\n  \"force\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pricing/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pricing", "refresh"]
+            },
+            "description": "Queue price refresh job (requires auth)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "eBay",
+      "item": [
+        {
+          "name": "List eBay Listings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ebay/listings?status=active&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ebay", "listings"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "draft, active, ended, sold"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get all eBay listings (requires auth)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create eBay Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": 1,\n  \"price\": 52.99,\n  \"quantity\": 1,\n  \"condition_id\": 3000,\n  \"category_id\": \"19476\",\n  \"duration\": 30,\n  \"auto_decline_below\": 45.00,\n  \"shipping_type\": \"flat\",\n  \"shipping_cost\": 4.99,\n  \"return_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ebay/listings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ebay", "listings"]
+            },
+            "description": "Create new eBay listing (requires auth)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update eBay Listing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 49.99,\n  \"quantity\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/ebay/listings/ebay_123456",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ebay", "listings", "ebay_123456"]
+            },
+            "description": "Update an eBay listing (requires auth)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete eBay Listing",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ebay/listings/ebay_123456",
+              "host": ["{{base_url}}"],
+              "path": ["api", "ebay", "listings", "ebay_123456"]
+            },
+            "description": "End/delete an eBay listing (requires auth)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

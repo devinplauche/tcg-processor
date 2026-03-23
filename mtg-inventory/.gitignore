@@ -1,1 +1,9 @@
-mtg-inventory\__pycache__\*
+__pycache__/
+*.pyc
+*.pyo
+
+# Local runtime files
+.env
+mtg_inventory.db
+logs/
+qrcodes/

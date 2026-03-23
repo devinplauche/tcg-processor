@@ -1,2 +1,26 @@
 *.pyc
+__pycache__/
+
+# Local environments and secrets
+.env
+.venv/
+venv/
+
+# Local databases and runtime output
+*.db
+*.sqlite
+*.sqlite3
+logs/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+
+# Large/generated analysis artifacts
+MTGJSON-analysis/AllPrices.json
+MTGJSON-analysis/AllPricesToday.json
+MTGJSON-analysis/allidentifiers_cache.json.gz
+MTGJSON-analysis/allprices_cache.json.gz
+MTGJSON-analysis/src/AllPrices.json
+MTGJSON-analysis/src/mtg_prices.db
 
