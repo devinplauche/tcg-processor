@@ -157,6 +157,9 @@ def mock_config():
         
         # API Credentials (empty/test for mocking)
         mock.SCRYFALL_API = 'https://api.scryfall.com'
+        mock.EBAY_APP_ID = 'test_app_id'
+        mock.EBAY_DEV_ID = 'test_dev_id'
+        mock.EBAY_USER_TOKEN = 'test_user_token'
         mock.EBAY_CLIENT_ID = 'test_client_id'
         mock.EBAY_CLIENT_SECRET = 'test_client_secret'
         mock.EBAY_REFRESH_TOKEN = 'test_refresh_token'

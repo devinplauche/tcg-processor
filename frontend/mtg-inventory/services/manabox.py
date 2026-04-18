@@ -1,11 +1,20 @@
 import pandas as pd
 from models import Card
 from services.location_engine import assign_location
+from services.scanner_adapter import is_scanner_csv, normalize_scanner_csv
 
 def import_csv(db, file):
     df = pd.read_csv(file)
-    df.columns = [col.lower().replace(' ', '_') for col in df.columns]
-    print(df.columns)
+
+    # Auto-detect scanner CSV format and normalise before column validation.
+    # Scanner output uses 'card_name' and lacks many ManaBox columns; the
+    # adapter renames and fills defaults so the rest of this function is
+    # format-agnostic.
+    scanner_import = is_scanner_csv(df)
+    if scanner_import:
+        df = normalize_scanner_csv(df)
+    else:
+        df.columns = [col.lower().replace(' ', '_') for col in df.columns]
 
     # Validate required columns
     required_columns = ['name', 'set_code', 'set_name', 'collector_number', 'foil', 'rarity', 'quantity', 'manabox_id', 'scryfall_id', 'purchase_price', 'condition', 'language']
@@ -18,19 +27,34 @@ def import_csv(db, file):
     skipped_count = 0
     status_by_scryfall_id = {}
 
+    # Remove rows with missing or empty scryfall_id before aggregation so
+    # they are counted as skipped rather than inserted with an empty key.
+    df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(1).astype(int)
+    missing_mask = df['scryfall_id'].isna() | (df['scryfall_id'].astype(str).str.strip() == '')
+    skipped_count += int(missing_mask.sum())
+    df = df[~missing_mask].copy()
+
+    # Pre-aggregate rows that share the same scryfall_id within this batch
+    # (e.g. the same card scanned twice in one session). Summing quantities
+    # here avoids UNIQUE constraint errors from two INSERTs in the same tx.
+    if not df.empty:
+        df = (
+            df.groupby('scryfall_id', as_index=False)
+            .agg({**{col: 'first' for col in df.columns if col not in ('scryfall_id', 'quantity')}, 'quantity': 'sum'})
+        )
+
     for _, row in df.iterrows():
         scryfall_id = row['scryfall_id']
-        
-        # Skip rows with no scryfall_id
-        if pd.isna(scryfall_id):
-            skipped_count += 1
-            continue
 
         card = db.query(Card).filter(Card.scryfall_id == scryfall_id).first()
 
         if card:
-            # Update existing card
-            card.quantity = row['quantity']
+            # Scanner imports: each row is a physical card seen → accumulate stock.
+            # ManaBox imports: the quantity field is the authoritative total → set it.
+            if scanner_import:
+                card.quantity = (card.quantity or 0) + int(row['quantity'])
+            else:
+                card.quantity = int(row['quantity'])
             card.condition = row['condition']
             updated_count += 1
             status_by_scryfall_id[str(scryfall_id)] = 'updated'

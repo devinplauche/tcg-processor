@@ -320,20 +320,25 @@ def api_ebay_health():
     """Return eBay integration readiness and token validation status."""
     from config import Config
 
-    configured = bool(Config.EBAY_CLIENT_ID and Config.EBAY_CLIENT_SECRET)
-    token_configured = bool(Config.EBAY_REFRESH_TOKEN)
+    configured = bool(Config.EBAY_APP_ID and Config.EBAY_DEV_ID)
+    token_configured = bool(Config.EBAY_USER_TOKEN)
 
     result = {
         'configured': configured,
+        'app_id_configured': bool(Config.EBAY_APP_ID),
+        'dev_id_configured': bool(Config.EBAY_DEV_ID),
+        'user_token_configured': token_configured,
         'refresh_token_configured': token_configured,
         'sandbox_mode': Config.EBAY_SANDBOX_MODE,
         'token_ok': False,
+        'auth_status_code': None,
     }
 
     if configured and token_configured:
         api = eBayAPI()
-        token = api.get_access_token()
-        result['token_ok'] = bool(token)
+        result['token_ok'] = api.validate_rest_access()
+        result['auth_mode'] = getattr(api, '_auth_mode', None)
+        result['auth_status_code'] = getattr(api, '_last_auth_status', None)
 
     return jsonify(result)
 
@@ -388,7 +393,7 @@ def api_create_ebay_listing():
 
         ebay_api = eBayAPI()
         if not ebay_api.get_access_token():
-            return jsonify({'success': False, 'error': 'eBay auth failed. Verify refresh token.'}), 502
+            return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
         quantity = int(payload.get('quantity') or card.quantity or 1)
         price = float(payload.get('price') or card.purchase_price or 1.0)
@@ -436,7 +441,7 @@ def api_update_ebay_listing(listing_id):
     payload = request.get_json(silent=True) or {}
     ebay_api = eBayAPI()
     if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify refresh token.'}), 502
+        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
     update_payload = {
         'price': {
@@ -462,7 +467,7 @@ def api_publish_ebay_listing(listing_id):
     """Publish a listing to eBay marketplace."""
     ebay_api = eBayAPI()
     if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify refresh token.'}), 502
+        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
     published = ebay_api.publish_listing(listing_id)
     if not published:
@@ -481,7 +486,7 @@ def api_bulk_publish_ebay_listings():
 
     ebay_api = eBayAPI()
     if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify refresh token.'}), 502
+        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
     results = []
     for listing_id in listing_ids:
@@ -670,7 +675,7 @@ def api_system_status():
             db_connected = False
         
         # eBay check
-        ebay_configured = bool(Config.EBAY_CLIENT_ID and Config.EBAY_CLIENT_SECRET and Config.EBAY_REFRESH_TOKEN)
+        ebay_configured = bool(Config.EBAY_APP_ID and Config.EBAY_DEV_ID and Config.EBAY_USER_TOKEN)
         ebay_status = 'ready' if ebay_configured else 'not_configured'
         ebay_mode = 'sandbox' if Config.EBAY_SANDBOX_MODE else 'production'
         

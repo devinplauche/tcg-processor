@@ -86,9 +86,15 @@ class APITestConfig:
     
     # eBay (requires credentials, uses sandbox)
     EBAY_ENABLED = bool(
-        os.getenv('EBAY_CLIENT_ID') and
-        os.getenv('EBAY_CLIENT_SECRET') and
-        os.getenv('EBAY_REFRESH_TOKEN')
+        (
+            os.getenv('EBAY_APP_ID') and
+            os.getenv('EBAY_DEV_ID') and
+            os.getenv('EBAY_USER_TOKEN')
+        ) or (
+            os.getenv('EBAY_CLIENT_ID') and
+            os.getenv('EBAY_CLIENT_SECRET') and
+            os.getenv('EBAY_REFRESH_TOKEN')
+        )
     )
     EBAY_SANDBOX_MODE = os.getenv('EBAY_SANDBOX_MODE', 'true').lower() in ('true', '1', 't')
     

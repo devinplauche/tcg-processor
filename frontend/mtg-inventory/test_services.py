@@ -122,6 +122,9 @@ class TesteBayAPI:
     def test_get_access_token_success(self, mock_post):
         """Test successful OAuth token acquisition"""
         with patch('services.scryfall_api.Config') as mock_config:
+            mock_config.EBAY_APP_ID = 'app_123'
+            mock_config.EBAY_DEV_ID = 'dev_123'
+            mock_config.EBAY_USER_TOKEN = None
             mock_config.EBAY_CLIENT_ID = 'client_123'
             mock_config.EBAY_CLIENT_SECRET = 'secret_123'
             mock_config.EBAY_REFRESH_TOKEN = 'refresh_123'
@@ -141,6 +144,9 @@ class TesteBayAPI:
     def test_create_listing_success(self, mock_post):
         """Test successful listing creation"""
         with patch('services.scryfall_api.Config') as mock_config:
+            mock_config.EBAY_APP_ID = 'app_123'
+            mock_config.EBAY_DEV_ID = 'dev_123'
+            mock_config.EBAY_USER_TOKEN = None
             mock_config.EBAY_CLIENT_ID = 'client_123'
             mock_config.EBAY_CLIENT_SECRET = 'secret_123'
             mock_config.EBAY_REFRESH_TOKEN = 'refresh_123'
@@ -173,6 +179,9 @@ class TesteBayAPI:
     def test_publish_listing_success(self, mock_post):
         """Test successful listing publication"""
         with patch('services.scryfall_api.Config') as mock_config:
+            mock_config.EBAY_APP_ID = 'app_123'
+            mock_config.EBAY_DEV_ID = 'dev_123'
+            mock_config.EBAY_USER_TOKEN = None
             mock_config.EBAY_CLIENT_ID = 'client_123'
             mock_config.EBAY_CLIENT_SECRET = 'secret_123'
             mock_config.EBAY_REFRESH_TOKEN = 'refresh_123'
@@ -186,6 +195,24 @@ class TesteBayAPI:
             result = api.publish_listing('listing_123')
             
             assert result is True
+
+    @patch('services.scryfall_api.requests.get')
+    def test_validate_rest_access_success(self, mock_get):
+        """Test live-access validator returns true for successful sell-api auth."""
+        with patch('services.scryfall_api.Config') as mock_config:
+            mock_config.EBAY_APP_ID = 'app_123'
+            mock_config.EBAY_DEV_ID = 'dev_123'
+            mock_config.EBAY_USER_TOKEN = 'user_token_123'
+            mock_config.EBAY_CLIENT_ID = 'client_123'
+            mock_config.EBAY_CLIENT_SECRET = 'secret_123'
+            mock_config.EBAY_REFRESH_TOKEN = 'refresh_123'
+            mock_config.EBAY_SANDBOX_MODE = True
+
+            mock_get.return_value.status_code = 200
+
+            api = eBayAPI()
+            assert api.validate_rest_access() is True
+            assert api._last_auth_status == 200
 
 
 # ========================

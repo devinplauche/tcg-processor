@@ -117,7 +117,7 @@ async function checkEbayAuth() {
         const mode = data.sandbox_mode ? 'sandbox' : 'production';
         status.textContent = data.token_ok
             ? `Ready (${mode})`
-            : `Configured=${data.configured}, RefreshToken=${data.refresh_token_configured}, TokenOK=${data.token_ok}`;
+            : `Configured=${data.configured}, UserToken=${data.user_token_configured ?? data.refresh_token_configured}, TokenOK=${data.token_ok}`;
     } catch (err) {
         status.textContent = 'Failed to check eBay auth';
     }

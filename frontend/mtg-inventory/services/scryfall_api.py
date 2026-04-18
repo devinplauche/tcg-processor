@@ -48,13 +48,27 @@ class eBayAPI:
     BASE_URL = "https://api.ebay.com" if not Config.EBAY_SANDBOX_MODE else "https://api.sandbox.ebay.com"
     
     def __init__(self):
+        self.app_id = Config.EBAY_APP_ID
+        self.dev_id = Config.EBAY_DEV_ID
+        self.user_token = Config.EBAY_USER_TOKEN
         self.client_id = Config.EBAY_CLIENT_ID
         self.client_secret = Config.EBAY_CLIENT_SECRET
         self.refresh_token = Config.EBAY_REFRESH_TOKEN
         self._access_token = None
+        self._auth_mode = None
+        self._last_auth_status = None
     
     def get_access_token(self) -> Optional[str]:
-        """Get OAuth access token from eBay"""
+        """Get token for eBay calls.
+
+        Preferred mode uses EBAY_USER_TOKEN directly. Legacy OAuth is retained
+        for existing environments that still provide client secret + refresh token.
+        """
+        if self.user_token:
+            self._access_token = self.user_token
+            self._auth_mode = "user_token"
+            return self._access_token
+
         if not all([self.client_id, self.client_secret, self.refresh_token]):
             return None
         
@@ -74,10 +88,30 @@ class eBayAPI:
             response.raise_for_status()
             result = response.json()
             self._access_token = result.get("access_token")
+            self._auth_mode = "oauth"
             return self._access_token
         except (requests.exceptions.RequestException, ValueError, json.JSONDecodeError):
             pass
         return None
+
+    def validate_rest_access(self) -> bool:
+        """Validate token against a real eBay Sell API endpoint."""
+        if not self._access_token and not self.get_access_token():
+            self._last_auth_status = None
+            return False
+
+        try:
+            url = f"{self.BASE_URL}/sell/account/v1/privilege"
+            headers = {
+                "Authorization": f"Bearer {self._access_token}",
+                "Content-Type": "application/json",
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            self._last_auth_status = response.status_code
+            return response.status_code in (200, 204)
+        except requests.exceptions.RequestException:
+            self._last_auth_status = None
+            return False
     
     def create_listing(self, listing_data: Dict) -> Optional[str]:
         """

@@ -4,6 +4,8 @@ __pycache__/
 
 # Local runtime files
 .env
+.env.local
+.env.*.local
 mtg_inventory.db
 logs/
 qrcodes/
