@@ -22,6 +22,7 @@ class Card(Base):
     box_number = Column(Integer)
     slot_number = Column(Integer)
     list_on_ebay = Column(Boolean, default=False)
+    ebay_offer_id = Column(Text)
     ebay_listing_id = Column(Text)
     created_at = Column(TIMESTAMP, default=func.now())
     updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())

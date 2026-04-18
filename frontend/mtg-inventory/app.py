@@ -7,7 +7,7 @@ from database import init_db, SessionLocal
 from routes import inventory, ebay, tcgplayer, locations
 from sqlalchemy import desc, asc, func
 from services.scryfall_api import ScryfallAPI
-from services.scryfall_api import eBayAPI
+from services.ebay_api import eBayAPI, EbayAPIError
 
 
 def compute_pricing_engine_results(condition=None):
@@ -321,17 +321,19 @@ def api_ebay_health():
     from config import Config
 
     configured = bool(Config.EBAY_APP_ID and Config.EBAY_DEV_ID)
-    token_configured = bool(Config.EBAY_USER_TOKEN)
+    token_configured = bool(Config.EBAY_USER_TOKEN or Config.EBAY_REFRESH_TOKEN)
 
     result = {
         'configured': configured,
         'app_id_configured': bool(Config.EBAY_APP_ID),
         'dev_id_configured': bool(Config.EBAY_DEV_ID),
-        'user_token_configured': token_configured,
-        'refresh_token_configured': token_configured,
+        'user_token_configured': bool(Config.EBAY_USER_TOKEN),
+        'refresh_token_configured': bool(Config.EBAY_REFRESH_TOKEN),
         'sandbox_mode': Config.EBAY_SANDBOX_MODE,
         'token_ok': False,
         'auth_status_code': None,
+        'inventory_model_ready': False,
+        'inventory_model_reason': None,
     }
 
     if configured and token_configured:
@@ -339,6 +341,13 @@ def api_ebay_health():
         result['token_ok'] = api.validate_rest_access()
         result['auth_mode'] = getattr(api, '_auth_mode', None)
         result['auth_status_code'] = getattr(api, '_last_auth_status', None)
+        if result['token_ok']:
+            try:
+                api.resolve_listing_policies()
+                api.resolve_location_key()
+                result['inventory_model_ready'] = True
+            except EbayAPIError as exc:
+                result['inventory_model_reason'] = str(exc)
 
     return jsonify(result)
 
@@ -366,6 +375,7 @@ def api_ebay_cards():
                 'condition': c.condition,
                 'quantity': c.quantity,
                 'purchase_price': c.purchase_price,
+                'ebay_offer_id': c.ebay_offer_id,
                 'ebay_listing_id': c.ebay_listing_id,
                 'sku': f'mtg-card-{c.id}',
             }
@@ -373,6 +383,43 @@ def api_ebay_cards():
         ])
     finally:
         db.close()
+
+
+def _build_ebay_sku(card) -> str:
+    return f'mtg-card-{card.id}'
+
+
+def _resolve_listing_price(card, payload):
+    requested_price = payload.get('price')
+    fallback_price = float(card.purchase_price or 0.0)
+    verified_snapshot = ScryfallAPI.get_verified_price(card.scryfall_id, foil=bool(card.foil))
+    verified_price = (verified_snapshot or {}).get('verified_price')
+
+    try:
+        requested_price = float(requested_price) if requested_price is not None else None
+    except (TypeError, ValueError):
+        raise ValueError('Invalid price value')
+
+    selected_price = requested_price if requested_price and requested_price > 0 else None
+    if selected_price is None and verified_price is not None and verified_price > 0:
+        selected_price = verified_price
+    if selected_price is None and fallback_price > 0:
+        selected_price = fallback_price
+    if selected_price is None:
+        selected_price = 0.99
+
+    return round(float(selected_price), 2), verified_snapshot
+
+
+def _build_listing_description(card, verified_snapshot, condition):
+    description = f"{card.name} from {card.set_name or card.set_code or 'an unknown set'}."
+    description += f" Condition: {condition or 'Ungraded'}."
+    if verified_snapshot and verified_snapshot.get('verified_price') is not None:
+        description += (
+            f" Scryfall {verified_snapshot.get('price_key', 'usd')} snapshot: "
+            f"${float(verified_snapshot['verified_price']):.2f}."
+        )
+    return description
 
 
 @app.route('/api/ebay/listings', methods=['POST'])
@@ -396,38 +443,56 @@ def api_create_ebay_listing():
             return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
         quantity = int(payload.get('quantity') or card.quantity or 1)
-        price = float(payload.get('price') or card.purchase_price or 1.0)
         condition = payload.get('condition') or card.condition or 'NM'
+        price, verified_snapshot = _resolve_listing_price(card, payload)
+        description = payload.get('description') or _build_listing_description(card, verified_snapshot, condition)
+        sku = _build_ebay_sku(card)
 
-        listing_data = {
-            'sku': f'mtg-card-{card.id}',
-            'product': {
-                'title': f"{card.name} [{card.set_code}] {condition}",
-                'description': payload.get('description') or f"{card.name} from set {card.set_code}. Condition: {condition}.",
-            },
-            'availability': {
-                'shipToLocationAvailability': {
-                    'quantity': quantity,
-                }
-            },
-            'condition': condition,
-            'price': {
-                'value': f"{price:.2f}",
-                'currency': 'USD',
-            },
-        }
+        inventory_payload = ebay_api.build_inventory_item_payload(
+            card=card,
+            quantity=quantity,
+            description=description,
+            card_condition=condition,
+            image_url=(verified_snapshot or {}).get('image_url'),
+        )
+        ebay_api.upsert_inventory_item(sku=sku, payload=inventory_payload)
 
-        listing_id = ebay_api.create_listing(listing_data)
-        if not listing_id:
-            return jsonify({'success': False, 'error': 'eBay listing creation failed'}), 502
+        existing_offer = ebay_api.get_offer_by_sku(sku)
+        offer_id = (existing_offer or {}).get('offerId')
+        if offer_id:
+            ebay_api.update_offer(
+                offer_id=offer_id,
+                price=price,
+                quantity=quantity,
+                description=description,
+            )
+        else:
+            offer_id = ebay_api.create_offer(
+                sku=sku,
+                price=price,
+                quantity=quantity,
+                description=description,
+            )
 
-        card.ebay_listing_id = listing_id
+        card.ebay_offer_id = offer_id
         card.list_on_ebay = True
         db.commit()
 
-        return jsonify({'success': True, 'listing_id': listing_id, 'card_id': card.id})
+        return jsonify({
+            'success': True,
+            'card_id': card.id,
+            'offer_id': offer_id,
+            'listing_id': card.ebay_listing_id,
+            'verified_price': (verified_snapshot or {}).get('verified_price'),
+            'price_used': price,
+            'price_source': (verified_snapshot or {}).get('price_key'),
+            'status': 'draft_ready',
+        })
     except ValueError:
         return jsonify({'success': False, 'error': 'Invalid numeric value in request payload'}), 400
+    except EbayAPIError as exc:
+        db.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 502
     except Exception as exc:
         db.rollback()
         return jsonify({'success': False, 'error': str(exc)}), 500
@@ -435,73 +500,155 @@ def api_create_ebay_listing():
         db.close()
 
 
-@app.route('/api/ebay/listings/<listing_id>', methods=['PATCH'])
-def api_update_ebay_listing(listing_id):
+@app.route('/api/ebay/cards/<int:card_id>/listing', methods=['PATCH'])
+def api_update_ebay_listing(card_id):
     """Update an existing eBay listing with new pricing/quantity data."""
+    from models import Card
+
     payload = request.get_json(silent=True) or {}
-    ebay_api = eBayAPI()
-    if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
+    db = SessionLocal()
+    try:
+        card = db.query(Card).filter(Card.id == card_id).first()
+        if not card:
+            return jsonify({'success': False, 'error': 'Card not found'}), 404
+        if not card.ebay_offer_id:
+            return jsonify({'success': False, 'error': 'Create a draft listing first'}), 400
 
-    update_payload = {
-        'price': {
-            'value': f"{float(payload.get('price', 0.0)):.2f}",
-            'currency': 'USD',
-        },
-        'availability': {
-            'shipToLocationAvailability': {
-                'quantity': int(payload.get('quantity', 1)),
-            }
-        },
-    }
+        ebay_api = eBayAPI()
+        if not ebay_api.get_access_token():
+            return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
-    result = ebay_api.update_listing(listing_id, update_payload)
-    if not result:
-        return jsonify({'success': False, 'error': 'eBay update failed'}), 502
+        quantity = int(payload.get('quantity') or card.quantity or 1)
+        condition = payload.get('condition') or card.condition or 'NM'
+        price, verified_snapshot = _resolve_listing_price(card, payload)
+        description = payload.get('description') or _build_listing_description(card, verified_snapshot, condition)
 
-    return jsonify({'success': True, 'listing_id': listing_id, 'result': result})
+        inventory_payload = ebay_api.build_inventory_item_payload(
+            card=card,
+            quantity=quantity,
+            description=description,
+            card_condition=condition,
+            image_url=(verified_snapshot or {}).get('image_url'),
+        )
+        ebay_api.upsert_inventory_item(sku=_build_ebay_sku(card), payload=inventory_payload)
+        result = ebay_api.update_offer(
+            offer_id=card.ebay_offer_id,
+            price=price,
+            quantity=quantity,
+            description=description,
+        )
+        db.commit()
+        return jsonify({
+            'success': True,
+            'card_id': card.id,
+            'offer_id': card.ebay_offer_id,
+            'listing_id': card.ebay_listing_id,
+            'verified_price': (verified_snapshot or {}).get('verified_price'),
+            'price_used': price,
+            'result': result,
+        })
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid numeric value in request payload'}), 400
+    except EbayAPIError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    finally:
+        db.close()
 
 
-@app.route('/api/ebay/listings/<listing_id>/publish', methods=['POST'])
-def api_publish_ebay_listing(listing_id):
+@app.route('/api/ebay/cards/<int:card_id>/publish', methods=['POST'])
+def api_publish_ebay_listing(card_id):
     """Publish a listing to eBay marketplace."""
-    ebay_api = eBayAPI()
-    if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
+    from models import Card
 
-    published = ebay_api.publish_listing(listing_id)
-    if not published:
-        return jsonify({'success': False, 'error': 'Failed to publish listing'}), 502
+    db = SessionLocal()
+    try:
+        card = db.query(Card).filter(Card.id == card_id).first()
+        if not card:
+            return jsonify({'success': False, 'error': 'Card not found'}), 404
+        if not card.ebay_offer_id:
+            return jsonify({'success': False, 'error': 'Create a draft listing first'}), 400
 
-    return jsonify({'success': True, 'listing_id': listing_id})
+        ebay_api = eBayAPI()
+        if not ebay_api.get_access_token():
+            return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
+
+        state = ebay_api.publish_offer(card.ebay_offer_id)
+        card.ebay_listing_id = state.listing_id
+        card.list_on_ebay = True
+        db.commit()
+
+        return jsonify({
+            'success': True,
+            'card_id': card.id,
+            'offer_id': state.offer_id,
+            'listing_id': state.listing_id,
+            'listing_url': state.listing_url,
+            'status': state.status,
+        })
+    except EbayAPIError as exc:
+        db.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    finally:
+        db.close()
 
 
 @app.route('/api/ebay/listings/bulk-publish', methods=['POST'])
 def api_bulk_publish_ebay_listings():
     """Publish a set of listings in one operation."""
+    from models import Card
+
     payload = request.get_json(silent=True) or {}
-    listing_ids = payload.get('listing_ids') or []
-    if not isinstance(listing_ids, list) or not listing_ids:
-        return jsonify({'success': False, 'error': 'listing_ids array is required'}), 400
+    card_ids = payload.get('card_ids') or []
+    if not isinstance(card_ids, list) or not card_ids:
+        return jsonify({'success': False, 'error': 'card_ids array is required'}), 400
 
-    ebay_api = eBayAPI()
-    if not ebay_api.get_access_token():
-        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
+    db = SessionLocal()
+    try:
+        cards = db.query(Card).filter(Card.id.in_([int(card_id) for card_id in card_ids])).all()
+        cards_by_id = {card.id: card for card in cards}
+        missing_offer_ids = [card_id for card_id in card_ids if not cards_by_id.get(int(card_id)) or not cards_by_id[int(card_id)].ebay_offer_id]
+        if missing_offer_ids:
+            return jsonify({'success': False, 'error': f'Missing draft offers for cards: {missing_offer_ids}'}), 400
 
-    results = []
-    for listing_id in listing_ids:
-        ok = ebay_api.publish_listing(str(listing_id))
-        results.append({'listing_id': listing_id, 'published': bool(ok)})
+        ebay_api = eBayAPI()
+        if not ebay_api.get_access_token():
+            return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY_APP_ID, EBAY_DEV_ID, and EBAY_USER_TOKEN.'}), 502
 
-    published_count = sum(1 for item in results if item['published'])
-    return jsonify(
-        {
-            'success': published_count == len(results),
-            'published_count': published_count,
-            'requested_count': len(results),
-            'results': results,
-        }
-    )
+        states = ebay_api.bulk_publish_offers([cards_by_id[int(card_id)].ebay_offer_id for card_id in card_ids])
+        listing_id_by_offer = {state.offer_id: state for state in states}
+
+        results = []
+        for card_id in card_ids:
+            card = cards_by_id[int(card_id)]
+            state = listing_id_by_offer.get(card.ebay_offer_id)
+            if state:
+                card.ebay_listing_id = state.listing_id
+                card.list_on_ebay = True
+            results.append({
+                'card_id': card.id,
+                'offer_id': card.ebay_offer_id,
+                'listing_id': state.listing_id if state else None,
+                'listing_url': state.listing_url if state else None,
+                'published': bool(state and state.listing_id),
+            })
+
+        db.commit()
+        published_count = sum(1 for item in results if item['published'])
+        return jsonify(
+            {
+                'success': published_count == len(results),
+                'published_count': published_count,
+                'requested_count': len(results),
+                'results': results,
+            }
+        )
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'card_ids must contain integers'}), 400
+    except EbayAPIError as exc:
+        db.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 502
+    finally:
+        db.close()
 
 
 @app.route('/api/pricing-engine/data')

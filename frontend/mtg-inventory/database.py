@@ -1,4 +1,5 @@
 import os
+from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
@@ -33,3 +34,18 @@ Base = declarative_base()
 def init_db():
     from models import Card, Price, Box, SyncLog, ImportCardLink
     Base.metadata.create_all(bind=engine)
+    _ensure_cards_columns()
+
+
+def _ensure_cards_columns():
+    required_columns = {
+        "ebay_offer_id": "ALTER TABLE cards ADD COLUMN ebay_offer_id TEXT",
+    }
+    with engine.begin() as connection:
+        try:
+            columns = {row[1] for row in connection.execute(text("PRAGMA table_info(cards)"))}
+        except Exception:
+            return
+        for column_name, ddl in required_columns.items():
+            if column_name not in columns:
+                connection.execute(text(ddl))

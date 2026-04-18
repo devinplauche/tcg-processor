@@ -40,7 +40,7 @@
                     <th>Condition</th>
                     <th>Qty</th>
                     <th>Purchase Price</th>
-                    <th>Listing ID</th>
+                    <th>eBay State</th>
                     <th>Update Price</th>
                     <th>Action</th>
                 </tr>
@@ -72,14 +72,14 @@ async function loadCards() {
 
         body.innerHTML = cards.map((card) => `
             <tr>
-                <td><input type="checkbox" data-role="publish-select" data-listing-id="${escapeHtml(card.ebay_listing_id || '')}"/></td>
+                <td><input type="checkbox" data-role="publish-select" data-card-id="${card.id}"/></td>
                 <td>${card.id}</td>
                 <td>${escapeHtml(card.name || '—')}</td>
                 <td>${escapeHtml(card.set_code || '—')}</td>
                 <td>${escapeHtml(card.condition || '—')}</td>
                 <td>${card.quantity ?? 0}</td>
                 <td>$${Number(card.purchase_price || 0).toFixed(2)}</td>
-                <td><code>${escapeHtml(card.ebay_listing_id || '—')}</code></td>
+                <td><code>${escapeHtml(card.ebay_listing_id || (card.ebay_offer_id ? `draft:${card.ebay_offer_id}` : '—'))}</code></td>
                 <td>
                     <input
                         data-role="update-price"
@@ -116,7 +116,7 @@ async function checkEbayAuth() {
         const data = await resp.json();
         const mode = data.sandbox_mode ? 'sandbox' : 'production';
         status.textContent = data.token_ok
-            ? `Ready (${mode})`
+            ? `Ready (${mode})${data.inventory_model_ready ? '' : `, inventory setup incomplete: ${data.inventory_model_reason || 'unknown reason'}`}`
             : `Configured=${data.configured}, UserToken=${data.user_token_configured ?? data.refresh_token_configured}, TokenOK=${data.token_ok}`;
     } catch (err) {
         status.textContent = 'Failed to check eBay auth';
@@ -140,20 +140,21 @@ async function createListing(cardId, buttonEl) {
         if (row) {
             const codeEl = row.querySelector('td code');
             if (codeEl) {
-                codeEl.textContent = data.listing_id;
+                codeEl.textContent = data.listing_id || `draft:${data.offer_id}`;
             }
             const checkbox = row.querySelector("input[data-role='publish-select']");
             if (checkbox) {
-                checkbox.dataset.listingId = data.listing_id;
+                checkbox.dataset.cardId = cardId;
             }
         }
 
         const card = findCardById(cardId);
         if (card) {
-            card.ebay_listing_id = data.listing_id;
+            card.ebay_offer_id = data.offer_id;
+            card.ebay_listing_id = data.listing_id || card.ebay_listing_id;
         }
 
-        status.textContent = `Created listing ${data.listing_id} for card ${cardId}`;
+        status.textContent = `Prepared ${data.listing_id || `draft:${data.offer_id}`} for card ${cardId} using $${Number(data.price_used || 0).toFixed(2)}`;
     } catch (err) {
         status.textContent = err.message || 'Failed to create listing';
     }
@@ -169,13 +170,13 @@ async function updateListing(cardId, buttonEl) {
     const priceInput = row.querySelector("input[data-role='update-price']");
     const card = findCardById(cardId);
 
-    if (!card || !card.ebay_listing_id) {
+    if (!card || !card.ebay_offer_id) {
         status.textContent = 'Create listing first before update';
         return;
     }
 
     try {
-        const resp = await fetch(`/api/ebay/listings/${encodeURIComponent(card.ebay_listing_id)}`, {
+        const resp = await fetch(`/api/ebay/cards/${encodeURIComponent(cardId)}/listing`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -187,7 +188,7 @@ async function updateListing(cardId, buttonEl) {
         if (!resp.ok || !data.success) {
             throw new Error(data.error || 'Failed to update listing');
         }
-        status.textContent = `Updated listing ${card.ebay_listing_id}`;
+        status.textContent = `Updated ${card.ebay_listing_id || `draft:${card.ebay_offer_id}`} using $${Number(data.price_used || 0).toFixed(2)}`;
     } catch (err) {
         status.textContent = err.message || 'Failed to update listing';
     }
@@ -196,20 +197,30 @@ async function updateListing(cardId, buttonEl) {
 async function publishListing(cardId) {
     const status = document.getElementById('ebayActionStatus');
     const card = findCardById(cardId);
-    if (!card || !card.ebay_listing_id) {
+    if (!card || !card.ebay_offer_id) {
         status.textContent = 'Create listing first before publish';
         return;
     }
 
     try {
-        const resp = await fetch(`/api/ebay/listings/${encodeURIComponent(card.ebay_listing_id)}/publish`, {
+        const resp = await fetch(`/api/ebay/cards/${encodeURIComponent(cardId)}/publish`, {
             method: 'POST',
         });
         const data = await resp.json();
         if (!resp.ok || !data.success) {
             throw new Error(data.error || 'Failed to publish listing');
         }
-        status.textContent = `Published listing ${card.ebay_listing_id}`;
+        card.ebay_listing_id = data.listing_id;
+        const row = document.querySelector(`button[data-action="create"][onclick="createListing(${cardId}, this)"]`)?.closest('tr');
+        if (row) {
+            const codeEl = row.querySelector('td code');
+            if (codeEl) {
+                codeEl.textContent = data.listing_id;
+            }
+        }
+        status.textContent = data.listing_url
+            ? `Published listing ${data.listing_id}: ${data.listing_url}`
+            : `Published listing ${data.listing_id}`;
     } catch (err) {
         status.textContent = err.message || 'Failed to publish listing';
     }
@@ -218,11 +229,11 @@ async function publishListing(cardId) {
 async function bulkPublish() {
     const status = document.getElementById('ebayActionStatus');
     const selected = Array.from(document.querySelectorAll("input[data-role='publish-select']:checked"))
-        .map((el) => el.dataset.listingId)
-        .filter((listingId) => listingId && listingId !== '—');
+        .map((el) => Number(el.dataset.cardId))
+        .filter((cardId) => Number.isFinite(cardId));
 
     if (selected.length === 0) {
-        status.textContent = 'Select at least one row with a listing ID for bulk publish';
+        status.textContent = 'Select at least one row to bulk publish';
         return;
     }
 
@@ -230,11 +241,17 @@ async function bulkPublish() {
         const resp = await fetch('/api/ebay/listings/bulk-publish', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ listing_ids: selected }),
+            body: JSON.stringify({ card_ids: selected }),
         });
         const data = await resp.json();
-        if (!resp.ok) {
+        if (!resp.ok || !data.success) {
             throw new Error(data.error || 'Bulk publish failed');
+        }
+        for (const result of data.results || []) {
+            const card = findCardById(result.card_id);
+            if (card && result.listing_id) {
+                card.ebay_listing_id = result.listing_id;
+            }
         }
         status.textContent = `Bulk publish completed: ${data.published_count}/${data.requested_count} published`;
     } catch (err) {
