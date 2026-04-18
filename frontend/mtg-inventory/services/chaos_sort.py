@@ -2,9 +2,13 @@
 Chaos Sort Service - Randomizes inventory ordering
 """
 import random
+import logging
 from typing import List
 from models import Card
 from sqlalchemy.orm import Session
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChaosSort:
@@ -93,16 +97,21 @@ class ChaosSort:
         # Assign new locations
         from services.location_engine import assign_location
         
-        for i, card in enumerate(cards):
-            # Clear old location
-            card.location_code = None
-            card.box_number = None
-            card.slot_number = None
-            
-            # Assign new location
-            assign_location(self.db, card)
-        
-        self.db.commit()
+        try:
+            for card in cards:
+                # Clear old location
+                card.location_code = None
+                card.box_number = None
+                card.slot_number = None
+
+                # Assign new location
+                assign_location(self.db, card)
+
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            logger.exception("Chaos location update failed; transaction rolled back")
+            raise
         return cards
     
     def weighted_chaos_sort(self, weights: dict = None) -> List[str]:
@@ -126,8 +135,9 @@ class ChaosSort:
                 'mint': 1.2        # Mint condition more often
             }
         
-        # Create weighted list
-        weighted_cards = []
+        # Build weights aligned with card IDs for weighted random sampling.
+        card_ids = []
+        card_weights = []
         for card in cards:
             weight = 1.0
             
@@ -139,14 +149,11 @@ class ChaosSort:
             
             if card.condition == 'mint' and 'mint' in weights:
                 weight *= weights['mint']
-            
-            # Add card multiple times based on weight
-            for _ in range(int(weight)):
-                weighted_cards.append(card.scryfall_id)
-        
-        # Shuffle and take original count
-        random.shuffle(weighted_cards)
-        return weighted_cards[:len(cards)]
+
+            card_ids.append(card.scryfall_id)
+            card_weights.append(weight)
+
+        return random.choices(card_ids, weights=card_weights, k=len(cards))
     
     def chaos_sort_by_set(self) -> List[str]:
         """

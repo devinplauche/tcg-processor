@@ -286,6 +286,10 @@ async function loadDashboardData() {
     // Load stats
     try {
         const statsResp = await fetch('/api/dashboard/stats');
+        if (!statsResp.ok) {
+            const body = await statsResp.text();
+            throw new Error(body || `Stats request failed (${statsResp.status})`);
+        }
         const stats = await statsResp.json();
         document.getElementById('statTotalCards').textContent = stats.total_cards.toLocaleString();
         document.getElementById('statTotalBoxes').textContent = stats.total_boxes.toLocaleString();
@@ -301,6 +305,10 @@ async function loadDashboardData() {
     // Load recent imports
     try {
         const importsResp = await fetch('/api/dashboard/recent-imports');
+        if (!importsResp.ok) {
+            const body = await importsResp.text();
+            throw new Error(body || `Recent imports request failed (${importsResp.status})`);
+        }
         const imports = await importsResp.json();
         const tbody = document.getElementById('recentImportsBody');
         
@@ -314,9 +322,9 @@ async function loadDashboardData() {
                 return `
                     <tr class="import-row" data-import-id="${imp.id}" style="cursor: pointer;">
                         <td><code style="color: var(--muted);">${date}</code></td>
-                        <td>${imp.type}</td>
+                        <td>${escapeHtml(imp.type)}</td>
                         <td><span class="badge ${statusClass}">+${imp.cards_processed}</span></td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td><span class="badge ${statusClass}">${escapeHtml(statusText)}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -332,6 +340,10 @@ async function loadDashboardData() {
     // Load system status
     try {
         const statusResp = await fetch('/api/dashboard/system-status');
+        if (!statusResp.ok) {
+            const body = await statusResp.text();
+            throw new Error(body || `System status request failed (${statusResp.status})`);
+        }
         const status = await statusResp.json();
         const container = document.querySelector('.status-grid');
         
@@ -351,7 +363,7 @@ async function loadDashboardData() {
                     <div class="status-indicator ${indicatorClass}"></div>
                     <div class="status-text">
                         <div class="status-name">${item.name}</div>
-                        <div class="status-detail">${item.data.status}</div>
+                        <div class="status-detail">${escapeHtml(item.data.status)}</div>
                     </div>
                 </div>
             `;
@@ -365,9 +377,20 @@ async function loadDashboardData() {
 document.addEventListener('DOMContentLoaded', loadDashboardData);
 
 // Reload when page is restored from browser back/forward cache.
-window.addEventListener('pageshow', function() {
-    loadDashboardData();
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        loadDashboardData();
+    }
 });
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 async function showImportDetails(importId) {
     try {

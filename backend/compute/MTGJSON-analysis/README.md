@@ -66,6 +66,7 @@ CONFIG = {
     "min_buylist_price":     1.50,            # Ignore cheap cards below this
     "min_profit_usd":        2.00,            # Only highlight if profit >= $2
     "check_time":            "08:00",         # Run daily at 8am
+    "max_alerts_per_run":    10,               # Cap number of alerts sent in one run
 }
 ```
 

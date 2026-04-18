@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 import requests
 
+from config import Config
 from services.ebay_api import EbayAPIError, eBayAPI
 
 
@@ -66,3 +67,4 @@ class ScryfallAPI:
 
 
 # Backward-compatible re-export while callers migrate to services.ebay_api.
+__all__ = ["ScryfallAPI", "Config", "EbayAPIError", "eBayAPI"]

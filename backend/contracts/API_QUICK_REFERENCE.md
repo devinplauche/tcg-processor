@@ -67,7 +67,7 @@ POST /api/boxes/:id/qr             # Generate QR code
 
 ### Inventory Management
 ```
-POST /inventory/import             # Upload CSV
+POST /api/inventory/import         # Upload CSV
 ```
 
 ### Pricing
@@ -113,7 +113,7 @@ curl "http://localhost:5000/api/cards/search?q=Ragavan&limit=10"
 ```bash
 curl -X POST \
   -F "file=@export.csv" \
-  http://localhost:5000/inventory/import
+  http://localhost:5000/api/inventory/import
 ```
 
 ### Create eBay Listing (with auth)
@@ -212,7 +212,7 @@ All cards use standard MTG condition abbreviations:
 ## 📊 Data Fields
 
 ### Card Object Key Fields
-```json
+```jsonc
 {
   "id": 1,                           // Database ID
   "scryfall_id": "uuid-xxx",         // Scryfall UUID
@@ -228,7 +228,7 @@ All cards use standard MTG condition abbreviations:
 ```
 
 ### Box Object Key Fields
-```json
+```jsonc
 {
   "id": 1,                           // Box ID
   "number": 1,                       // Box number
@@ -325,7 +325,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 ### Enable Request Logging
 ```bash
-# In Flask terminal, will show all requests
+# Option 1: run Flask in debug mode with request logs
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+flask run --debug
+```
+
+```python
+# Option 2: configure logging in app code
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+app.run(debug=True)
 ```
 
 ### Check Database

@@ -2,7 +2,7 @@
 
 ## Before Starting Development
 
-- [ ] Activated Python venv: `. .venv/Scripts/activate` (or on Windows: `.venv\Scripts\activate`)
+- [ ] Activated Python venv: `source .venv/bin/activate` (or on Windows: `.venv\Scripts\activate`)
 - [ ] Installed dependencies: `pip install -r requirements.txt`
 - [ ] Created `.env` file with API credentials (optional, for integration tests)
 
@@ -170,7 +170,7 @@ mock_get.assert_called_once()
 - Hardcode credentials in test files
 - Share test databases between test functions
 - Use `time.sleep()` in tests (it's slow!)
-- Test implementation details, test behavior
+- Avoid testing implementation details; focus on testing observable behavior and outcomes.
 
 ## Test Organization
 
@@ -215,7 +215,7 @@ pytest --cov=services --cov-report=term-missing
 ### In CI/CD Pipeline
 ```bash
 # Only mocked tests (no external dependencies)
-pytest unit/ -v --tb=short
+pytest tests/unit/ -v --tb=short
 
 # Integration tests run separately on main branch
 # (requires credentials in secrets)
@@ -290,7 +290,7 @@ pytest --markers       # Show all markers
 ## Monitoring Production APIs
 
 ```python
-from services_rate_limiter import SCRYFALL_LIMITER
+from services_rate_limiter import SCRYFALL_LIMITER, SCRYFALL_BREAKER
 
 # Check rate limiter stats
 stats = SCRYFALL_LIMITER.get_stats()

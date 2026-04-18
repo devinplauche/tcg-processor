@@ -67,6 +67,7 @@ Publish listings to marketplace
 | **TCGPlayer API** | 4 | Auth, pricing, product lookup |
 | **eBay API** | 3 | Auth, listing creation, publishing |
 | **CSV Import** | 6 | Parsing, validation, deduplication |
+| **Manabox Import** | 3 | Import service and endpoint behavior |
 | **Location Engine** | 6 | Box assignment, capacity management |
 | **E2E Workflows** | 12 | Full pipelines, data integrity |
 
@@ -235,6 +236,7 @@ test_e2e.py::TestE2EDataIntegrity::test_e2e_box_capacity_respected PASSED     [1
 ### Test Files
 1. **test_services.py** (18 tests) - Unit tests for all service classes
 2. **test_e2e.py** (12 tests) - End-to-end workflow tests
+3. **test_import.py** (12 tests) - import/initialization tests
 
 ### Implementation Files
 1. **services/scryfall_api.py** - ScryfallAPI, TCGPlayerAPI, eBayAPI classes

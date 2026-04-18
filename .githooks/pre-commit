@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+
+if command -v python >/dev/null 2>&1; then
+  exec python scripts/secret_hygiene.py "$@"
+fi
+
+if command -v py >/dev/null 2>&1; then
+  exec py -3 scripts/secret_hygiene.py "$@"
+fi
+
+echo "pre-commit hook requires Python on PATH." >&2
+exit 1

@@ -250,7 +250,7 @@ function handleDrop(e) {
 
 function handleFileSelect(e) {
     const file = e.target.files[0];
-    if (!file || !file.name.endsWith('.csv')) {
+    if (!file || !file.name.toLowerCase().endsWith('.csv')) {
         alert('Please select a CSV file');
         return;
     }
@@ -320,7 +320,7 @@ function renderImportSummary(result) {
     document.getElementById('statAdded').textContent = result.added || 0;
     document.getElementById('statUpdated').textContent = result.updated || 0;
     document.getElementById('statSkipped').textContent = result.skipped || 0;
-    document.getElementById('statErrors').textContent = 0;
+    document.getElementById('statErrors').textContent = result.errors || 0;
     document.getElementById('statsGrid').style.display = 'grid';
 
     const rows = Array.isArray(result.preview) ? result.preview : [];
@@ -331,7 +331,7 @@ function renderImportSummary(result) {
             const statusText = row.status === 'added' ? 'New' : 'Updated';
             return `
                 <tr>
-                    <td>${row.id || '—'}</td>
+                    <td>${escapeHtml(row.id || '—')}</td>
                     <td>${escapeHtml(row.name || '—')}</td>
                     <td>${escapeHtml(row.set_code || '—')}</td>
                     <td>${escapeHtml(row.condition || '—')}</td>

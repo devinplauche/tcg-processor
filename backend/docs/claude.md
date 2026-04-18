@@ -270,7 +270,7 @@ All other dependencies already present:
 
 4. **Limitations**:
    - Tests don't call real APIs (by design)
-   - No real eBay sandbox testing (use tests+ your own integration)
+    - No real eBay sandbox testing (use tests + your own integration)
    - QR code generation not tested (separate feature)
 
 5. **Next Steps for Production**:

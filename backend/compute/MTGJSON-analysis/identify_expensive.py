@@ -22,10 +22,11 @@ high_values = []
 for uuid, prices in card_data.items():
     if 'paper' in prices and 'tcgplayer' in prices['paper']:
         tcg_retail = prices['paper']['tcgplayer'].get('retail', {})
+        # Walk format -> date -> price entries and keep only numeric high-value prices.
         for format_type, price_data in tcg_retail.items():
             if isinstance(price_data, dict):
                 for date, price in price_data.items():
-                    if price > 500:
+                    if isinstance(price, (int, float)) and price > 500:
                         high_values.append((uuid, format_type, price))
 
 high_values.sort(key=lambda x: x[2], reverse=True)

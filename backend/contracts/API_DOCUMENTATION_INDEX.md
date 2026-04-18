@@ -279,17 +279,17 @@ Found?
 
 ## 📦 File Locations
 
-All documentation files are in the `mtg-inventory/` directory:
+Documentation files are in `backend/contracts/`:
 
 ```
-mtg-inventory/
-├── API_CONTRACT.md                  # Complete spec (main file)
-├── API_QUICK_REFERENCE.md           # Quick lookup
-├── openapi.yaml                     # OpenAPI specification
-├── postman_collection.json          # Postman requests
-├── API_DOCUMENTATION_INDEX.md       # This file
-│
-├── app.py                           # Flask app
+backend/
+├── contracts/
+│   ├── API_CONTRACT.md                  # Complete spec (main file)
+│   ├── API_QUICK_REFERENCE.md           # Quick lookup
+│   ├── openapi.yaml                     # OpenAPI specification
+│   ├── postman_collection.json          # Postman requests
+│   └── API_DOCUMENTATION_INDEX.md       # This file
+├── app.py                               # Flask app
 ├── routes/
 ├── services/
 ├── templates/
@@ -304,7 +304,7 @@ mtg-inventory/
 ```bash
 # View API docs at http://localhost:8080
 docker run -p 8080:8080 -v $(pwd)/openapi.yaml:/openapi.yaml \
-  swaggerapi/swagger-ui -e SWAGGER_JSON=/openapi.yaml
+  -e SWAGGER_JSON=/openapi.yaml swaggerapi/swagger-ui
 ```
 
 ### ReDoc

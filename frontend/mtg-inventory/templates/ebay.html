@@ -62,6 +62,9 @@ async function loadCards() {
 
     try {
         const resp = await fetch(`/api/ebay/cards?limit=${encodeURIComponent(limit)}`);
+        if (!resp.ok) {
+            throw new Error(`Failed to load cards (${resp.status})`);
+        }
         const cards = await resp.json();
         cardsCache = cards;
 
@@ -176,11 +179,17 @@ async function updateListing(cardId, buttonEl) {
     }
 
     try {
+        const parsedPrice = Number(priceInput.value);
+        if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+            status.textContent = 'Price must be a positive number';
+            return;
+        }
+
         const resp = await fetch(`/api/ebay/cards/${encodeURIComponent(cardId)}/listing`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                price: Number(priceInput.value || 0),
+                price: parsedPrice,
                 quantity: Number(card.quantity || 1),
             }),
         });

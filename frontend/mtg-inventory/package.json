@@ -3,11 +3,14 @@
   "private": true,
   "version": "1.0.0",
   "description": "Cypress e2e harness for full-stack MTG app",
+  "config": {
+    "backend_dir": "../../backend/services/mtg-api-gateway"
+  },
   "scripts": {
-    "serve:frontend": "c:/Users/devinsGamingPC/Coding/tcg-processor/.venv/Scripts/python.exe app.py",
-    "serve:backend": "cd ../../backend/services/mtg-api-gateway && mvn -q spring-boot:run",
+    "serve:frontend": "python app.py",
+    "serve:backend": "cd ${BACKEND_DIR:-$npm_package_config_backend_dir} && mvn -q spring-boot:run",
     "cypress:e2e": "wait-on http://localhost:5000 http://localhost:8080/api/v1/health && cypress run",
-    "e2e:fullstack": "concurrently -k -s first \"npm:serve:frontend\" \"npm:serve:backend\" \"npm:cypress:e2e\"",
+    "e2e:fullstack": "concurrently -k -s last \"npm:serve:frontend\" \"npm:serve:backend\" \"npm:cypress:e2e\"",
     "fullstack": "concurrently -k -s first \"npm:serve:frontend\" \"npm:serve:backend\""
   },
   "devDependencies": {

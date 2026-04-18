@@ -62,13 +62,24 @@ Copilot should prioritize clean separation of concerns, readability, and product
 
 ### Example Pattern
 ```python
+import os
+import logging
 import requests
 from flask import Blueprint, render_template
 
 bp = Blueprint('main', __name__)
+logger = logging.getLogger(__name__)
 
 @bp.route('/')
 def index():
-    response = requests.get(f"{API_BASE_URL}/tasks")
+  api_base_url = os.environ.get('API_BASE_URL')
+  if not api_base_url:
+    raise RuntimeError('API_BASE_URL environment variable is required')
+
+  tasks = []
+  try:
+    response = requests.get(f"{api_base_url}/tasks", timeout=10)
     tasks = response.json() if response.ok else []
+  except requests.exceptions.RequestException as exc:
+    logger.warning('Failed to fetch tasks from backend API: %s', exc)
     return render_template('index.html', tasks=tasks)

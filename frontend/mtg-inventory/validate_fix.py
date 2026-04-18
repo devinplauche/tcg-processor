@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from services.manabox import import_csv
 from models import Card, Box
 import io
+from pathlib import Path
 
 # Setup test database
 engine = create_engine('sqlite:///:memory:')
@@ -19,8 +20,9 @@ from sqlalchemy.orm import sessionmaker
 TestSession = sessionmaker(bind=engine)
 db = TestSession()
 
-# Read and import the test.csv (from parent directory)
-with open('../test.csv', 'rb') as f:
+# Read and import test.csv relative to this script location
+csv_path = Path(__file__).resolve().parent / 'test.csv'
+with open(csv_path, 'rb') as f:
     csv_data = f.read()
 
 csv_file = io.BytesIO(csv_data)

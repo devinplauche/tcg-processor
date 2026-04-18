@@ -160,11 +160,22 @@ let currentFilters = {
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     const box = params.get('box');
-    if (box) {
+    if (box && /^\d+$/.test(box)) {
         currentFilters.box = box;
         const tag = document.getElementById('boxFilterTag');
         tag.style.display = 'block';
-        tag.innerHTML = `Showing cards in <strong>BOX-${String(box).padStart(4, '0')}</strong> <a href="/cards" style="margin-left:8px; color:var(--accent2);">Clear box filter</a>`;
+        tag.textContent = '';
+        tag.appendChild(document.createTextNode('Showing cards in '));
+        const strong = document.createElement('strong');
+        strong.textContent = `BOX-${String(box).padStart(4, '0')}`;
+        tag.appendChild(strong);
+        tag.appendChild(document.createTextNode(' '));
+        const clear = document.createElement('a');
+        clear.href = '/cards';
+        clear.style.marginLeft = '8px';
+        clear.style.color = 'var(--accent2)';
+        clear.textContent = 'Clear box filter';
+        tag.appendChild(clear);
     }
 
     loadCards();
@@ -219,6 +230,10 @@ async function loadCards() {
 
     try {
         const resp = await fetch(`/api/cards/list?${params}`);
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(errorText || `Failed to load cards (${resp.status})`);
+        }
         const data = await resp.json();
         
         const tbody = document.getElementById('cardsTableBody');
@@ -233,13 +248,13 @@ async function loadCards() {
                 const value = (card.purchase_price || 0) * (card.quantity || 1);
                 return `
                     <tr>
-                        <td><strong>${card.name}</strong></td>
-                        <td>${card.set_code || '—'}</td>
-                        <td><span class="badge badge-info">${card.condition || '—'}</span></td>
+                        <td><strong>${escapeHtml(card.name || '—')}</strong></td>
+                        <td>${escapeHtml(card.set_code || '—')}</td>
+                        <td><span class="badge badge-info">${escapeHtml(card.condition || '—')}</span></td>
                         <td>${card.foil ? '✨ Yes' : 'No'}</td>
                         <td>${card.quantity}</td>
                         <td>$${value.toFixed(2)}</td>
-                        <td><code style="font-size: 10px; color: var(--accent2);">${card.location_code || '—'}</code></td>
+                        <td><code style="font-size: 10px; color: var(--accent2);">${escapeHtml(card.location_code || '—')}</code></td>
                     </tr>
                 `;
             }).join('');
@@ -255,6 +270,15 @@ async function loadCards() {
         document.getElementById('cardsTableBody').innerHTML = 
             '<tr><td colspan="7" style="text-align: center; color: var(--danger);">Error loading cards</td></tr>';
     }
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function previousPage() {

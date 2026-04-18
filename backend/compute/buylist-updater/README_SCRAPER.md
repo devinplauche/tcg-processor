@@ -19,7 +19,8 @@ Uses a real headless Chrome browser, which bypasses anti-bot detection.
 pip install selenium beautifulsoup4 pandas
 
 # Install ChromeDriver (match your Chrome version)
-# https://chromedriver.chromium.org/
+# https://developer.chrome.com/docs/webdriver/chrome-for-testing/
+# https://googlechromelabs.github.io/chrome-for-testing/
 ```
 
 **Usage:**
@@ -70,7 +71,7 @@ If you only need occasional data:
 
 - `cardkingdom_buylist_scraper.py` - Basic requests-based scraper (limited by 403 errors)
 - `cardkingdom_scraper_selenium.py` - Robust Selenium-based scraper (recommended)
-- `README.md` - This file
+- `README_SCRAPER.md` - This file
 
 ---
 
@@ -82,8 +83,9 @@ pip install selenium
 ```
 
 ### "WebDriverException: chromedriver not found"
-1. Download ChromeDriver from https://chromedriver.chromium.org/
-2. Match the version with your Chrome browser (`chrome://version`)
+1. Use Chrome for Testing docs: https://developer.chrome.com/docs/webdriver/chrome-for-testing/
+2. Download matching Chrome and ChromeDriver from indexed builds: https://googlechromelabs.github.io/chrome-for-testing/
+3. Match major versions with your installed browser (`chrome://version`) or use bundled CfT binaries
 3. Either:
    - Add to PATH, or
    - Edit `cardkingdom_scraper_selenium.py` line with:

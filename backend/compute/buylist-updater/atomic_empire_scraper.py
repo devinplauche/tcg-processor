@@ -31,7 +31,7 @@ import argparse
 import logging
 import sys
 from typing import List, Dict, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -230,78 +230,84 @@ def _parse_price(text: str) -> float:
 
 # ── Main Scraping Function ─────────────────────────────────────────────────────
 
+def scrape_with_driver(driver: webdriver.Chrome, query: str) -> List[Dict]:
+    """Scrape Atomic Empire for cards matching search query using an existing driver."""
+    all_cards: List[Dict] = []
+    page = 1
+    max_empty_pages = 2
+    empty_count = 0
+
+    while True:
+        params = urlencode({"search": query, "page": page})
+        url = f"{SEARCH_URL}?{params}"
+
+        log.info(f"Fetching page {page}: {url}")
+        driver.get(url)
+
+        # Wait for content to load
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, "div.product-item, div.card-product, div.productItemWrapper")
+                )
+            )
+            # Give JavaScript time to render prices
+            time.sleep(2)
+        except Exception as e:
+            log.warning(f"Timeout waiting for content on page {page}: {e}")
+            break
+
+        # Parse the page
+        soup = BeautifulSoup(driver.page_source, "lxml")
+        cards = parse_product_cards(soup)
+
+        if not cards:
+            empty_count += 1
+            log.debug(f"Page {page} returned no cards (empty count: {empty_count})")
+            if empty_count >= max_empty_pages:
+                break
+        else:
+            empty_count = 0
+            all_cards.extend(cards)
+            log.info(f"Page {page}: Found {len(cards)} cards (total: {len(all_cards)})")
+
+        # Check if there's a next page
+        next_button = driver.find_elements(By.CSS_SELECTOR, "a[rel='next'], a.next-page")
+        if not next_button:
+            log.info("No next page found, stopping.")
+            break
+
+        page += 1
+        time.sleep(3)  # Be respectful to the server
+    
+    return all_cards
+
+
 def scrape_by_search(query: str, headless: bool = True) -> List[Dict]:
     """Scrape Atomic Empire for cards matching search query."""
     driver = create_chrome_driver(headless=headless)
-    all_cards: List[Dict] = []
-    
     try:
-        page = 1
-        max_empty_pages = 2
-        empty_count = 0
-        
-        while True:
-            # Build URL with search parameters
-            # Adjust query params based on Atomic Empire's actual URL structure
-            url = f"{SEARCH_URL}?search={query}&page={page}"
-            
-            log.info(f"Fetching page {page}: {url}")
-            driver.get(url)
-            
-            # Wait for content to load
-            try:
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_all_elements_located(
-                        (By.CSS_SELECTOR, "div.product-item, div.card-product, div.productItemWrapper")
-                    )
-                )
-                # Give JavaScript time to render prices
-                time.sleep(2)
-            except Exception as e:
-                log.warning(f"Timeout waiting for content on page {page}: {e}")
-                break
-            
-            # Parse the page
-            soup = BeautifulSoup(driver.page_source, "lxml")
-            cards = parse_product_cards(soup)
-            
-            if not cards:
-                empty_count += 1
-                log.debug(f"Page {page} returned no cards (empty count: {empty_count})")
-                if empty_count >= max_empty_pages:
-                    break
-            else:
-                empty_count = 0
-                all_cards.extend(cards)
-                log.info(f"Page {page}: Found {len(cards)} cards (total: {len(all_cards)})")
-            
-            # Check if there's a next page
-            next_button = driver.find_elements(By.CSS_SELECTOR, "a[rel='next'], a.next-page")
-            if not next_button:
-                log.info("No next page found, stopping.")
-                break
-            
-            page += 1
-            time.sleep(3)  # Be respectful to the server
-    
+        return scrape_with_driver(driver, query)
     finally:
         driver.quit()
-    
-    return all_cards
 
 
 def scrape_bulk_list(card_list: List[str], headless: bool = True) -> List[Dict]:
     """Scrape Atomic Empire for multiple cards from a list."""
     all_cards: List[Dict] = []
-    
-    for i, card_name in enumerate(card_list, 1):
-        log.info(f"Processing card {i}/{len(card_list)}: {card_name}")
-        cards = scrape_by_search(card_name, headless=headless)
-        all_cards.extend(cards)
-        
-        # Be respectful and don't hammer the server
-        if i < len(card_list):
-            time.sleep(5)
+
+    driver = create_chrome_driver(headless=headless)
+    try:
+        for i, card_name in enumerate(card_list, 1):
+            log.info(f"Processing card {i}/{len(card_list)}: {card_name}")
+            cards = scrape_with_driver(driver, card_name)
+            all_cards.extend(cards)
+
+            # Be respectful and don't hammer the server
+            if i < len(card_list):
+                time.sleep(5)
+    finally:
+        driver.quit()
     
     return all_cards
 

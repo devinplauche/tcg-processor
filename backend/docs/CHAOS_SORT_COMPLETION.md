@@ -98,7 +98,7 @@ Created 20 new tests covering all chaos sort and data generation scenarios:
 
 ### Data Generation Scaling
 ```
-1,000 cards  → 0.07s (100 cards/ms)
+1,000 cards  → 0.07s (14,286 cards/s)
 10,000 cards → 1.05s (9.5k cards/s)
 100,000 cards → 9.65s (10.4k cards/s)
 ```

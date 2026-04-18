@@ -139,7 +139,9 @@ Time: ~2.5 seconds
 All services can be imported from `services`:
 
 ```python
-from services.scryfall_api import ScryfallAPI, TCGPlayerAPI, eBayAPI
+from services.scryfall_api import ScryfallAPI
+from services.tcgplayer_api import TCGPlayerAPI
+from services.ebay_api import eBayAPI
 
 # Scryfall API
 card = ScryfallAPI.get_card_by_id('4e2fe951-4820-4555-8cee-621c66ed8620')

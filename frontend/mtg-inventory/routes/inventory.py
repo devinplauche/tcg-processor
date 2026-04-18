@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+import logging
 from services import manabox
 from database import SessionLocal
 from models import SyncLog, ImportCardLink
 
 bp = Blueprint('inventory', __name__, url_prefix='/inventory')
+logger = logging.getLogger(__name__)
 
 
 def _is_ajax_request(req):
@@ -56,6 +58,7 @@ def import_csv():
                 flash(f"Import successful: {result['added']} added, {result['updated']} updated, {result['skipped']} skipped.", 'success')
             except Exception as e:
                 db.rollback()
+                logger.exception("CSV import failed")
                 try:
                     db.add(
                         SyncLog(
@@ -69,13 +72,15 @@ def import_csv():
                 except Exception:
                     db.rollback()
                 if _is_ajax_request(request):
-                    return jsonify({'success': False, 'error': str(e)}), 500
-                flash(f"An error occurred: {e}", 'danger')
+                    return jsonify({'success': False, 'error': 'Internal server error'}), 500
+                flash("An internal server error occurred during import.", 'danger')
             finally:
                 db.close()
             return redirect(url_for('inventory.import_csv'))
 
         if _is_ajax_request(request):
             return jsonify({'success': False, 'error': 'Invalid file type. Please upload a CSV file.'}), 400
+        flash('Invalid file type. Please upload a CSV file.', 'error')
+        return redirect(url_for('inventory.import_csv'))
 
     return render_template('import.html')

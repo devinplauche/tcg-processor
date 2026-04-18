@@ -104,8 +104,7 @@ lsof -ti:5000 | xargs kill -9
 ### Database Issues
 ```bash
 # Reset the database
-rm mtg_inventory.db
-python -c "from database import init_db; init_db()"
+python -c "from pathlib import Path; Path('mtg_inventory.db').unlink(missing_ok=True); from database import init_db; init_db()"
 ```
 
 ### Module Not Found Errors
@@ -117,7 +116,8 @@ pip install -r requirements.txt --force-reinstall
 ### CORS or Static File Issues
 ```bash
 # Clear browser cache (Ctrl+Shift+Delete or Cmd+Shift+Delete)
-# Or restart Flask with: python app.py -p 8000
+# Or restart Flask with: flask run -p 8000
+# Alternative for app.py runs: set FLASK_RUN_PORT=8000 before `python app.py`
 ```
 
 ---

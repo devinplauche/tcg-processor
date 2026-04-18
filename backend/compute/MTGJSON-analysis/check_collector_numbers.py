@@ -9,7 +9,7 @@ data = today.get('data', {})
 
 # Load identifiers to see what info is available
 with gzip.open('allidentifiers_cache.json.gz', 'rt', encoding='utf-8') as f:
-    identifiers = json.load(f)['data']
+    identifiers = json.load(f).get('data', {})
 
 # Find all Psychic Frog entries
 psychic_frogs = {}
@@ -31,6 +31,8 @@ for uuid, info in psychic_frogs.items():
             latest_date = max(ck_bl.keys())
             price = ck_bl[latest_date]
             print(f"    CK Buylist: ${price}")
+        else:
+            print(f"    CK Buylist: (no price data)")
     else:
         print(f"    CK Buylist: (no price data)")
     print()

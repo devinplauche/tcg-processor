@@ -30,7 +30,7 @@ import time
 import argparse
 import logging
 import sys
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote_plus
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -204,7 +204,8 @@ def scrape_search_selenium(query: str, headless: bool = True) -> list[dict]:
         
         while True:
             # Build URL with search parameters
-            url = f"{BUYLIST_URL}?filter[search]={query}&page={page}"
+            encoded_query = quote_plus(query)
+            url = f"{BUYLIST_URL}?filter[search]={encoded_query}&page={page}"
             
             log.info(f"Fetching page {page}: {url}")
             driver.get(url)

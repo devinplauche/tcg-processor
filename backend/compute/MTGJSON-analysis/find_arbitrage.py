@@ -74,9 +74,11 @@ def compute_arbitrage(condition=None, min_profit=None):
     for card in prices_data.values():
         paper = card.get('paper', {})
         ck_bl = paper.get('cardkingdom', {}).get('buylist', {}).get('normal', {})
-        if ck_bl:
-            latest_date = max(ck_bl.keys())
-            break
+        if not ck_bl:
+            continue
+        card_latest = max(ck_bl.keys())
+        if latest_date is None or card_latest > latest_date:
+            latest_date = card_latest
 
     if not latest_date:
         return {

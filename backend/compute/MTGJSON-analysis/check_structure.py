@@ -36,7 +36,7 @@ for uuid, prices in card_data.items():
         for format_type, price_data in tcg_retail.items():
             if isinstance(price_data, dict):
                 for date, price in price_data.items():
-                    if price > 100:
+                    if isinstance(price, (int, float)) and price > 100:
                         high_values.append((uuid, format_type, price))
 
 high_values.sort(key=lambda x: x[2], reverse=True)

@@ -446,8 +446,8 @@ class ArbitrageReporter:
                 "total_profit_potential": round(opp.total_profit_potential, 2),
             })
         
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
         log.info(f"Saved {len(data)} opportunities to {filepath}")
 
 
@@ -512,16 +512,18 @@ def main() -> None:
     # Load source (buy) data
     for filepath in args.sources:
         # Detect vendor from filename
-        vendor = Path(filepath).stem.replace("_buylist", "").replace("_", " ").title()
-        log.info(f"Loading source from {filepath} (vendor: {vendor})")
-        cards = BuylistLoader.load_buylist(filepath, vendor)
+        vendor_key = Path(filepath).stem.replace("_buylist", "").replace(" ", "_").lower()
+        vendor_display = vendor_key.replace("_", " ").title()
+        log.info(f"Loading source from {filepath} (vendor: {vendor_display})")
+        cards = BuylistLoader.load_buylist(filepath, vendor_key)
         analyzer.add_vendor_data(cards)
     
     # Load destination (sell) data
     for filepath in destinations:
-        vendor = Path(filepath).stem.replace("_buylist", "").replace("_", " ").title()
-        log.info(f"Loading destination from {filepath} (vendor: {vendor})")
-        cards = BuylistLoader.load_buylist(filepath, vendor)
+        vendor_key = Path(filepath).stem.replace("_buylist", "").replace(" ", "_").lower()
+        vendor_display = vendor_key.replace("_", " ").title()
+        log.info(f"Loading destination from {filepath} (vendor: {vendor_display})")
+        cards = BuylistLoader.load_buylist(filepath, vendor_key)
         analyzer.add_vendor_data(cards)
     
     log.info("Analyzing for arbitrage opportunities...")

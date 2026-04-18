@@ -3,7 +3,7 @@
 **Project Status**: ✅ COMPLETE
 **Total Tests**: 62 (100% passing)
 **Test Execution Time**: 54.46 seconds
-**Configuration**: Windows 11, Python 3.14.2, pytest 9.0.2, SQLAlchemy ORM
+**Configuration**: Windows 11, Python 3.12.x, pytest 8.3.x, SQLAlchemy ORM
 
 ---
 
@@ -431,7 +431,7 @@ Before production deployment:
 ## Dependencies
 
 ```
-Flask==2.6.x
+Flask>=3.0,<4.0
 SQLAlchemy==2.0.x
 pandas==2.0.x
 requests==2.31.x
@@ -462,6 +462,7 @@ Performance metrics show the system can handle the production requirement of 440
 ---
 
 **Report Generated**: November 2024
-**Platform**: Windows 11, Python 3.14.2
+Note: This report documents work completed in November 2024 and is retained for historical reference.
+**Platform**: Windows 11, Python 3.12.x
 **Total Development Time**: 4 sessions
 **Final Test Status**: ✅ 62/62 PASSING (100%)

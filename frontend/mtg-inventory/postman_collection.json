@@ -206,7 +206,12 @@
           "name": "Import CSV",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -218,9 +223,9 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/inventory/import",
+              "raw": "{{base_url}}/api/inventory/import",
               "host": ["{{base_url}}"],
-              "path": ["inventory", "import"]
+              "path": ["api", "inventory", "import"]
             },
             "description": "Upload and import CSV from ManaBox"
           },

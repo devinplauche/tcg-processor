@@ -84,12 +84,13 @@ class DataGenerator:
         batch = []
         
         for i in range(count):
+            set_code = random.choice(self.SETS)
             card = Card(
                 scryfall_id=self._generate_scryfall_id(),
                 manabox_id=self._generate_manabox_id(),
                 name=self._generate_card_name(i),
-                set_code=random.choice(self.SETS),
-                set_name=self._get_set_name(),
+                set_code=set_code,
+                set_name=self._get_set_name(set_code),
                 collector_number=str(random.randint(1, 300)),
                 foil=random.random() < 0.15,  # 15% foil
                 rarity=random.choice(self.RARITIES),
@@ -139,7 +140,7 @@ class DataGenerator:
         
         return f"{random.choice(prefixes)} {random.choice(suffixes)} #{index}"
     
-    def _get_set_name(self) -> str:
+    def _get_set_name(self, set_code: str) -> str:
         """Get full set name from set code"""
         set_names = {
             'LEA': 'Limited Edition Alpha', 'LEB': 'Limited Edition Beta',
@@ -164,7 +165,7 @@ class DataGenerator:
             'HBG': 'Homelands', 'ONE': 'ONE', 'MOM': 'March of the Machine',
             'LCI': 'Lost Caverns of Ixalan',
         }
-        return set_names.get(random.choice(self.SETS), 'Unknown Set')
+        return set_names.get(set_code, 'Unknown Set')
     
     def generate_sparse(self, count: int = 10000, rarity_distribution: dict = None) -> int:
         """
@@ -187,6 +188,12 @@ class DataGenerator:
                 'rare': 0.13,
                 'mythic': 0.02
             }
+
+        invalid_rarities = set(rarity_distribution.keys()) - set(self.RARITIES)
+        if invalid_rarities:
+            raise ValueError(f"Invalid rarity keys in rarity_distribution: {sorted(invalid_rarities)}")
+
+        rarity_rank = {rarity: idx for idx, rarity in enumerate(self.RARITIES)}
         
         batch = []
         batch_size = 1000
@@ -197,17 +204,19 @@ class DataGenerator:
                 list(rarity_distribution.keys()),
                 weights=list(rarity_distribution.values())
             )[0]
+
+            set_code = random.choice(self.SETS)
             
             card = Card(
                 scryfall_id=self._generate_scryfall_id(),
                 manabox_id=self._generate_manabox_id(),
                 name=self._generate_card_name(i),
-                set_code=random.choice(self.SETS),
-                set_name=self._get_set_name(),
+                set_code=set_code,
+                set_name=self._get_set_name(set_code),
                 collector_number=str(random.randint(1, 300)),
                 foil=random.random() < (0.25 if rarity == 'mythic' else 0.15),
                 rarity=rarity,
-                quantity=random.randint(1, max(1, 5 - self.RARITIES.index(rarity))),
+                quantity=random.randint(1, max(1, 5 - rarity_rank[rarity])),
                 condition=random.choice(self.CONDITIONS),
                 language=random.choice(self.LANGUAGES),
                 purchase_price=self._price_by_rarity(rarity),

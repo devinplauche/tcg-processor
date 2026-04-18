@@ -11,11 +11,11 @@
     <nav class="app-nav">
         <div class="nav-logo">MTG<span>.</span>INV</div>
         <div class="nav-links">
-            <a href="/" class="nav-link">Dashboard</a>
-            <a href="/cards" class="nav-link">Cards</a>
-            <a href="/inventory/import" class="nav-link">Import CSV</a>
-            <a href="/ebay" class="nav-link">eBay</a>
-            <a href="/pricing-engine" class="nav-link">Pricing Engine</a>
+            <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+            <a href="{{ url_for('cards') }}" class="nav-link">Cards</a>
+            <a href="{{ url_for('inventory.import_csv') }}" class="nav-link">Import CSV</a>
+            <a href="{{ url_for('ebay_console') }}" class="nav-link">eBay</a>
+            <a href="{{ url_for('pricing_engine') }}" class="nav-link">Pricing Engine</a>
         </div>
     </nav>
     <main class="app-main">

@@ -46,9 +46,9 @@ from email.mime.multipart import MIMEMultipart
 # -------------------------------------------------------------
 CONFIG = {
     # --- Email (Gmail App Password) ---
-    "email_from":     "you@gmail.com",
-    "email_password": "xxxx xxxx xxxx xxxx",   # Gmail App Password, NOT your login password
-    "email_to":       "you@gmail.com",
+    "email_from":     os.environ.get("EMAIL_FROM", ""),
+    "email_password": os.environ.get("EMAIL_PASSWORD", ""),
+    "email_to":       os.environ.get("EMAIL_TO", ""),
 
     # --- Database ---
     "db_file": "mtg_prices.db",   # SQLite file, created automatically on first run
@@ -276,8 +276,13 @@ def extract_ck_buylists(all_prices, card_names):
         if not normal:
             continue
 
-        latest_cash = normal[max(normal.keys())]
-        latest_credit = foil[max(foil.keys())] if foil else None
+        latest_entry = normal[max(normal.keys())]
+        if isinstance(latest_entry, dict):
+            latest_cash = latest_entry.get("cash")
+            latest_credit = latest_entry.get("credit")
+        else:
+            latest_cash = latest_entry
+            latest_credit = None
 
         if latest_cash and float(latest_cash) >= CONFIG["min_buylist_price"]:
             info = card_names.get(uuid, {"name": "Unknown", "set": "?"})
@@ -457,58 +462,60 @@ def run_check():
     log("=" * 55)
 
     conn = get_db()
-    log(f"Database: {os.path.abspath(CONFIG['db_file'])}")
+    try:
+        log(f"Database: {os.path.abspath(CONFIG['db_file'])}")
 
-    yesterday_prices = load_yesterday_prices(conn)
-    all_prices       = download_prices()
-    card_names       = fetch_card_names()
-    today_prices     = extract_ck_buylists(all_prices, card_names)
+        yesterday_prices = load_yesterday_prices(conn)
+        all_prices       = download_prices()
+        card_names       = fetch_card_names()
+        today_prices     = extract_ck_buylists(all_prices, card_names)
 
-    save_today_prices(conn, today_prices)
+        save_today_prices(conn, today_prices)
 
-    if not yesterday_prices:
-        log("No previous prices found -- run again tomorrow to start detecting spikes.")
-        log("Today's prices saved as baseline.")
+        if not yesterday_prices:
+            log("No previous prices found -- run again tomorrow to start detecting spikes.")
+            log("Today's prices saved as baseline.")
+            return
+
+        spikes = detect_spikes(today_prices, yesterday_prices)
+
+        if not spikes:
+            log("No significant buylist spikes today.")
+            return
+
+        opportunities = []
+        for spike in spikes:
+            log(f"  {spike['name']} (+{spike['spike_pct']:.0f}%) -- searching local TCG...")
+            time.sleep(CONFIG["request_delay"])
+
+            local  = search_tcg_local(spike["name"], CONFIG["zip_code"])
+            profit = round(spike["ck_today"] - local["price"], 2) if local else None
+
+            opp = {
+                **spike,
+                "tcg_price":  local["price"]      if local else None,
+                "store_name": local["store_name"] if local else None,
+                "tcg_url":    local["url"]        if local else None,
+                "profit":     profit,
+            }
+            opportunities.append(opp)
+            log_alert(conn, opp)
+
+        opportunities.sort(key=lambda x: (x["profit"] is None, -(x["profit"] or 0)))
+        profitable = [o for o in opportunities if o["profit"] and o["profit"] >= CONFIG["min_profit_usd"]]
+
+        log(f"{len(profitable)} profitable (>= ${CONFIG['min_profit_usd']}), {len(opportunities)} total logged to DB")
+        send_email(opportunities[:CONFIG["max_alerts_per_run"]])
+        log("Check complete.")
+        log("=" * 55)
+    finally:
         conn.close()
-        return
-
-    spikes = detect_spikes(today_prices, yesterday_prices)
-
-    if not spikes:
-        log("No significant buylist spikes today.")
-        conn.close()
-        return
-
-    opportunities = []
-    for spike in spikes:
-        log(f"  {spike['name']} (+{spike['spike_pct']:.0f}%) -- searching local TCG...")
-        time.sleep(CONFIG["request_delay"])
-
-        local  = search_tcg_local(spike["name"], CONFIG["zip_code"])
-        profit = round(spike["ck_today"] - local["price"], 2) if local else None
-
-        opp = {
-            **spike,
-            "tcg_price":  local["price"]      if local else None,
-            "store_name": local["store_name"] if local else None,
-            "tcg_url":    local["url"]        if local else None,
-            "profit":     profit,
-        }
-        opportunities.append(opp)
-        log_alert(conn, opp)
-
-    conn.close()
-
-    opportunities.sort(key=lambda x: (x["profit"] is None, -(x["profit"] or 0)))
-    profitable = [o for o in opportunities if o["profit"] and o["profit"] >= CONFIG["min_profit_usd"]]
-
-    log(f"{len(profitable)} profitable (>= ${CONFIG['min_profit_usd']}), {len(opportunities)} total logged to DB")
-    send_email(opportunities[:CONFIG["max_alerts_per_run"]])
-    log("Check complete.")
-    log("=" * 55)
 
 
 if __name__ == "__main__":
+    if not (CONFIG["email_from"] and CONFIG["email_password"] and CONFIG["email_to"]):
+        raise RuntimeError("EMAIL_FROM, EMAIL_PASSWORD, and EMAIL_TO environment variables are required")
+
     print("=" * 55)
     print("  MTG Buylist Spike Tracker (SQLite edition)")
     print("=" * 55)

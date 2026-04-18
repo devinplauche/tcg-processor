@@ -54,6 +54,21 @@ The Spring Boot service at `backend/services/mtg-api-gateway` provides:
 - Expose backend compute features via `backend/services/mtg-api-gateway`
 - Keep interface changes documented under `backend/contracts/` and `backend/docs/`
 
+## Local Developer Setup
+
+Run the bootstrap script once after cloning:
+
+```bash
+python scripts/setup_dev_environment.py
+```
+
+This does two things:
+
+- Creates `frontend/mtg-inventory/.env.local` from `.env.example` if you do not already have one
+- Configures git to use the repo-managed `.githooks/pre-commit` hook, which blocks commits containing common secret patterns
+
+Pull requests also run the non-live `frontend/mtg-inventory/test_secret_management.py` suite in CI as a backstop.
+
 ## Running the Spring Boot API Gateway
 
 From `backend/services/mtg-api-gateway`:

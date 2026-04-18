@@ -135,6 +135,9 @@ scryfall_cassette = vcr.VCR(
 )
 ```
 
+Note: `record_mode='none'` blocks new real HTTP calls unless test/fixture logic explicitly switches modes.
+If you want first-run recording without fixture overrides, use `record_mode='once'` during cassette creation.
+
 4. **Use in tests**:
 ```python
 @scryfall_cassette.use_cassette('scryfall_get_card.yaml')

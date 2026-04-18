@@ -93,6 +93,14 @@ body {
     border-color: var(--accent);
 }
 
+.nav-link:focus,
+.nav-link:focus-visible {
+    outline: 2px solid var(--accent2);
+    outline-offset: 2px;
+    color: var(--text);
+    border-color: var(--accent2);
+}
+
 /* ===== MAIN CONTENT ===== */
 .app-main {
     padding: 40px 32px;
@@ -252,6 +260,21 @@ body {
 
 .btn-danger:hover {
     background: #dc2626;
+}
+
+.btn:focus,
+.btn:focus-visible,
+.btn-primary:focus,
+.btn-primary:focus-visible,
+.btn-outline:focus,
+.btn-outline:focus-visible,
+.btn-success:focus,
+.btn-success:focus-visible,
+.btn-danger:focus,
+.btn-danger:focus-visible {
+    outline: 2px solid var(--accent2);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
 }
 
 /* ===== FORMS ===== */
@@ -484,6 +507,21 @@ table tbody tr:hover {
 .status-indicator.pending {
     background: var(--accent3);
     animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.75;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .status-indicator.off {

@@ -103,7 +103,7 @@ python arbitrage-engine/arbitrage_engine.py \
 ```
 
 **Parameters:**
-- `--sources`: Vendorfiles to buy from (can use same files as destinations for cross-vendor comparison)
+- `--sources`: Vendor files to buy from (can use same files as destinations for cross-vendor comparison)
 - `--destinations`: Vendor files to sell to (optional, defaults to sources)
 - `--output`: Where to save the CSV report (default: arbitrage_opportunities.csv)
 - `--json-output`: Also save results as JSON for API consumption
@@ -126,7 +126,7 @@ python atomic_empire_scraper.py \
 
 # 2. Get CardKingdom prices
 python cardkingdom_scraper_selenium.py \
-  --search "Tarmagoyf" \
+  --search "Tarmogoyf" \
   --output cardkingdom_buylist.csv
 
 # 3. Run arbitrage analysis

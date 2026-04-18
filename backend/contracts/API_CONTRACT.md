@@ -42,6 +42,17 @@ Authorization: Bearer <token>
 
 **Current Status**: Not yet implemented. All endpoints are publicly accessible for testing.
 
+### Endpoint Auth Status
+
+| Endpoint | Current Auth | Future Auth |
+|----------|--------------|-------------|
+| `GET /api/health` | Unauthenticated | Public |
+| `POST /api/inventory/import` | Unauthenticated | 🔒 Future auth |
+| `POST /api/pricing/refresh` | Unauthenticated | 🔒 Future auth |
+| `GET /api/pricing/refresh/:job_id` | Unauthenticated | 🔒 Future auth |
+| `GET /api/ebay/listings` | Unauthenticated | 🔒 Future auth |
+| `POST /api/ebay/listings` | Unauthenticated | 🔒 Future auth |
+
 ### API Key Alternative (Future)
 
 Alternative authentication via query parameter:
@@ -114,6 +125,7 @@ All errors return a standardized error object:
 |------|---------|------------|
 | `INVALID_REQUEST` | Malformed request | 400 |
 | `INVALID_FIELD` | Field validation failed | 400 |
+| `INVALID_FILE` | Invalid or corrupt file | 400 |
 | `RESOURCE_NOT_FOUND` | Resource doesn't exist | 404 |
 | `RESOURCE_CONFLICT` | Duplicate resource | 409 |
 | `UNAUTHORIZED` | Missing/invalid auth | 401 |
@@ -263,7 +275,7 @@ Accept: application/json
 **Status Codes**:
 - `200 OK` - Success (may return empty results)
 - `400 Bad Request` - Invalid query parameters
-- `401 Unauthorized` - Authentication required
+- `401 Unauthorized` - Reserved for future authentication enforcement
 
 **Examples**:
 ```bash
@@ -482,7 +494,7 @@ with open('export.csv', 'rb') as f:
 
 **Description**: Update a card's information.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Path Parameters**:
 | Parameter | Type | Description |
@@ -526,7 +538,7 @@ Content-Type: application/json
 - `200 OK` - Update successful
 - `400 Bad Request` - Invalid field values
 - `404 Not Found` - Card not found
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 
 ---
 
@@ -534,7 +546,7 @@ Content-Type: application/json
 
 **Description**: Delete a card from inventory.
 
-**Authentication**: Bearer token required (admin)
+**Authentication**: 🔒 Future: Bearer token planned (admin; currently unauthenticated)
 
 **Path Parameters**:
 | Parameter | Type | Description |
@@ -556,7 +568,7 @@ HTTP/1.1 204 No Content
 **Status Codes**:
 - `204 No Content` - Deletion successful
 - `404 Not Found` - Card not found
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 - `403 Forbidden` - Insufficient permissions
 
 ---
@@ -709,7 +721,7 @@ Accept: application/json
 
 **Description**: Generate a QR code image for a box.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Path Parameters**:
 | Parameter | Type | Description |
@@ -815,7 +827,7 @@ Accept: application/json
 
 **Description**: Refresh all currently cached prices from TCGPlayer (requires auth).
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Request**:
 ```http
@@ -854,8 +866,37 @@ Content-Type: application/json
 
 **Status Codes**:
 - `202 Accepted` - Refresh job queued
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 - `429 Rate Limited` - Too many refresh requests
+
+#### GET /api/pricing/refresh/:job_id
+
+**Description**: Check status of a background price refresh job.
+
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
+
+**Path Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `job_id` | string | Yes | Background job identifier returned by refresh queue call |
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "job_abc123",
+    "status": "in_progress",
+    "progress": 42,
+    "total": 100,
+    "completed_at": null
+  }
+}
+```
+
+`status` values: `pending`, `in_progress`, `completed`, `failed`.
+
+Clients should poll this endpoint after receiving `202 Accepted` from `POST /api/pricing/refresh`.
 
 ---
 
@@ -865,7 +906,7 @@ Content-Type: application/json
 
 **Description**: Get all eBay listings linked to cards.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Query Parameters**:
 | Parameter | Type | Description |
@@ -911,7 +952,7 @@ Accept: application/json
 
 **Status Codes**:
 - `200 OK` - Success
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 
 ---
 
@@ -919,7 +960,7 @@ Accept: application/json
 
 **Description**: Create a new eBay listing from a card.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Request**:
 ```http
@@ -948,7 +989,7 @@ Content-Type: application/json
 | `card_id` | integer | Yes | Card database ID |
 | `price` | float | Yes | Listing price in USD |
 | `quantity` | integer | Yes | Quantity available |
-| `condition_id` | integer | Yes | eBay condition ID |
+| `condition_id` | integer | Yes | eBay condition ID (see eBay Condition IDs below) |
 | `category_id` | string | Yes | eBay category ID |
 | `duration` | integer | No | Listing duration in days (default 30) |
 | `auto_decline_below` | float | No | Auto-decline offers below |
@@ -988,10 +1029,24 @@ Content-Type: application/json
 }
 ```
 
+##### eBay Condition IDs
+
+| ID | Meaning |
+|----|---------|
+| `1000` | New |
+| `1500` | New other |
+| `1750` | New with defects |
+| `3000` | Used |
+| `4000` | Very Good |
+| `5000` | Good |
+| `6000` | Acceptable |
+
+Reference: eBay Sell Inventory item condition docs.
+
 **Status Codes**:
 - `201 Created` - Listing created
 - `400 Bad Request` - Invalid parameters
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 - `404 Not Found` - Card not found
 
 ---
@@ -1000,7 +1055,7 @@ Content-Type: application/json
 
 **Description**: Update an eBay listing.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Path Parameters**:
 | Parameter | Type | Description |
@@ -1036,7 +1091,7 @@ Content-Type: application/json
 **Status Codes**:
 - `200 OK` - Updated
 - `404 Not Found` - Listing not found
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 
 ---
 
@@ -1044,7 +1099,7 @@ Content-Type: application/json
 
 **Description**: End/delete an eBay listing.
 
-**Authentication**: Bearer token required
+**Authentication**: 🔒 Future: Bearer token planned (currently unauthenticated)
 
 **Path Parameters**:
 | Parameter | Type | Description |
@@ -1066,7 +1121,7 @@ HTTP/1.1 204 No Content
 **Status Codes**:
 - `204 No Content` - Deleted
 - `404 Not Found` - Listing not found
-- `401 Unauthorized` - Missing auth token
+- `401 Unauthorized` - Reserved for future authentication enforcement
 
 ---
 

@@ -89,7 +89,7 @@ Coverage: ~95% of code paths
   - pytest common commands
 
 #### 9️⃣ TEST_SUITE_SUMMARY.md
-- **Location**: `/tcg-processor/TEST_SUITE_SUMMARY.md`
+- **Location**: `/mtg-inventory/TEST_SUITE_SUMMARY.md`
 - **Purpose**: Executive summary and overview
 - **Contents**:
   - Complete workflow diagram
@@ -99,7 +99,7 @@ Coverage: ~95% of code paths
   - Quality metrics
 
 #### 🔟 claude.md
-- **Location**: `/tcg-processor/claude.md`
+- **Location**: `/mtg-inventory/claude.md`
 - **Purpose**: Context save for future sessions
 - **Contents**:
   - Session summary
@@ -126,10 +126,9 @@ services/
 ### Test Layer
 
 ```
-tests/
-├── test_import.py           # 12 tests - CSV & location
-├── test_services.py         # 18 tests - APIs & services
-└── test_e2e.py              # 12 tests - End-to-end workflows
+test_import.py               # 12 tests - CSV & location
+test_services.py             # 18 tests - APIs & services
+test_e2e.py                  # 12 tests - End-to-end workflows
 ```
 
 ### Database Models

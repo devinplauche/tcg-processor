@@ -82,16 +82,39 @@ function showNotification(message, type = 'info') {
  * Count cards in CSV (for preview)
  */
 function parseCSVPreview(file) {
+    const parseCsvLine = (line) => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i += 1) {
+            const char = line[i];
+            if (char === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                    current += '"';
+                    i += 1;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                values.push(current);
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        values.push(current);
+        return values.map((v) => v.trim());
+    };
+
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const lines = e.target.result.split('\n');
-                const headers = lines[0].split(',').map(h => h.trim());
                 const rows = lines.slice(1, 9).filter(line => line.trim());
                 
                 const data = rows.map(line => {
-                    const values = line.split(',');
+                    const values = parseCsvLine(line);
                     return {
                         name: values[0] || '—',
                         set: values[1] || '—',
@@ -250,12 +273,12 @@ function handleCreateListing() {
             {
                 label: 'Cancel',
                 style: 'outline',
-                onclick: "document.querySelector('.modal-overlay').remove()"
+                onclick: () => document.querySelector('.modal-overlay')?.remove()
             },
             {
                 label: 'Create Listing',
                 style: 'primary',
-                onclick: "createEBayListing()"
+                onclick: () => createEBayListing()
             }
         ]
     );
@@ -281,7 +304,7 @@ function handleSearchCards() {
             {
                 label: 'Close',
                 style: 'outline',
-                onclick: "document.querySelector('.modal-overlay').remove()"
+                onclick: () => document.querySelector('.modal-overlay')?.remove()
             }
         ]
     );
@@ -303,14 +326,27 @@ function handleSearchCards() {
                 if (results.length === 0) {
                     resultsDiv.innerHTML = '<p style="color: var(--muted);">No cards found</p>';
                 } else {
-                    resultsDiv.innerHTML = results
-                        .slice(0, 5)
-                        .map(card => `
-                            <div style="padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer;" onclick="selectCard('${card.name}')">
-                                <strong>${card.name}</strong><br/>
-                                <span style="color: var(--muted); font-size: 0.9em;">${card.set} • ${card.collector_number}</span>
-                            </div>
-                        `).join('');
+                    resultsDiv.innerHTML = '';
+                    results.slice(0, 5).forEach((card) => {
+                        const row = document.createElement('div');
+                        row.style.padding = '8px';
+                        row.style.borderBottom = '1px solid var(--border)';
+                        row.style.cursor = 'pointer';
+                        row.addEventListener('click', () => selectCard(card.name));
+
+                        const strong = document.createElement('strong');
+                        strong.textContent = card.name || 'Unknown';
+                        row.appendChild(strong);
+                        row.appendChild(document.createElement('br'));
+
+                        const meta = document.createElement('span');
+                        meta.style.color = 'var(--muted)';
+                        meta.style.fontSize = '0.9em';
+                        meta.textContent = `${card.set || '—'} • ${card.collector_number || '—'}`;
+                        row.appendChild(meta);
+
+                        resultsDiv.appendChild(row);
+                    });
                 }
             } catch (error) {
                 resultsDiv.innerHTML = '<p style="color: var(--danger);">Search failed</p>';
@@ -442,14 +478,18 @@ function fadeIn(elements, delay = 0) {
  * Spin animation (for loading)
  */
 function spin(element) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    `;
-    document.head.appendChild(style);
+    const styleId = 'mtg-inventory-spin-keyframes';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     element.style.animation = 'spin 1s linear infinite';
 }
 
@@ -461,23 +501,53 @@ function spin(element) {
 function showModal(title, content, buttons = []) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal">
-            <div class="modal-header">
-                <h2>${title}</h2>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
-            </div>
-            <div class="modal-content">${content}</div>
-            <div class="modal-footer">
-                ${buttons.map(btn => 
-                    `<button class="btn btn-${btn.style || 'primary'}" onclick="${btn.onclick}">${btn.label}</button>`
-                ).join('')}
-            </div>
-        </div>
-    `;
-    
-    const style = document.createElement('style');
-    style.textContent = `
+    const modalBox = document.createElement('div');
+    modalBox.className = 'modal';
+
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+    const heading = document.createElement('h2');
+    heading.textContent = title;
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', () => modal.remove());
+    header.appendChild(heading);
+    header.appendChild(closeBtn);
+
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    if (content instanceof Node) {
+        modalContent.appendChild(content);
+    } else {
+        // Content provided to this helper is app-authored markup.
+        modalContent.innerHTML = String(content || '');
+    }
+
+    const footer = document.createElement('div');
+    footer.className = 'modal-footer';
+    buttons.forEach((btn) => {
+        const button = document.createElement('button');
+        button.className = `btn btn-${btn.style || 'primary'}`;
+        button.type = 'button';
+        button.textContent = btn.label || 'OK';
+        if (typeof btn.onclick === 'function') {
+            button.addEventListener('click', btn.onclick);
+        }
+        footer.appendChild(button);
+    });
+
+    modalBox.appendChild(header);
+    modalBox.appendChild(modalContent);
+    modalBox.appendChild(footer);
+    modal.appendChild(modalBox);
+
+    const modalStyleId = 'mtg-inventory-modal-styles';
+    if (!document.getElementById(modalStyleId)) {
+        const style = document.createElement('style');
+        style.id = modalStyleId;
+        style.textContent = `
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -522,7 +592,8 @@ function showModal(title, content, buttons = []) {
             cursor: pointer;
         }
     `;
-    document.head.appendChild(style);
+        document.head.appendChild(style);
+    }
     document.body.appendChild(modal);
 }
 

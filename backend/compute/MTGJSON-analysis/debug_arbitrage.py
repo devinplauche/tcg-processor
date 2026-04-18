@@ -9,6 +9,9 @@ print(f"Total cards: {len(prices_data)}")
 
 # Sample a few cards to see structure
 sample_uuids = list(prices_data.keys())[:5]
+if not sample_uuids:
+    print("No cards found in AllPrices.json data.")
+    raise SystemExit(1)
 
 for uuid in sample_uuids:
     card = prices_data[uuid]

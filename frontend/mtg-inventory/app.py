@@ -2,12 +2,26 @@ import os
 import importlib.util
 import subprocess
 import sys
+import time
+import threading
+import logging
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from database import init_db, SessionLocal
 from routes import inventory, ebay, tcgplayer, locations
 from sqlalchemy import desc, asc, func
+from sqlalchemy.exc import SQLAlchemyError
+from config import Config
 from services.scryfall_api import ScryfallAPI
 from services.ebay_api import eBayAPI, EbayAPIError
+from services.google_drive_pipeline import (
+    DEFAULT_DRIVE_FOLDER_URL,
+    DEFAULT_MIN_CONFIDENCE,
+    GoogleDriveIntegrationError,
+    ingest_drive_upload_scan_and_import,
+)
+
+logger = logging.getLogger(__name__)
+_COMPUTE_IMPORT_LOCK = threading.Lock()
 
 
 def compute_pricing_engine_results(condition=None):
@@ -24,12 +38,13 @@ def compute_pricing_engine_results(condition=None):
 
     module = importlib.util.module_from_spec(spec)
     original_cwd = os.getcwd()
-    try:
-        os.chdir(script_dir)
-        spec.loader.exec_module(module)
-        result = module.compute_arbitrage(condition=condition or None)
-    finally:
-        os.chdir(original_cwd)
+    with _COMPUTE_IMPORT_LOCK:
+        try:
+            os.chdir(script_dir)
+            spec.loader.exec_module(module)
+            result = module.compute_arbitrage(condition=condition or None)
+        finally:
+            os.chdir(original_cwd)
 
     opportunities = result.get('opportunities', [])[:30]
     enriched = []
@@ -70,7 +85,7 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(app_dir)
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = Config.FLASK_SECRET_KEY
 
 # Initialize database
 init_db()
@@ -291,6 +306,42 @@ def api_health():
     })
 
 
+@app.route('/api/integrations/google-drive/scan-import', methods=['POST'])
+def api_google_drive_scan_import():
+    """Upload image to Google Drive, require high-confidence LangChain match, then import card."""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'file is required'}), 400
+
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'success': False, 'error': 'file name is required'}), 400
+
+    folder_url = request.form.get('folder_url', DEFAULT_DRIVE_FOLDER_URL)
+    try:
+        min_confidence = float(request.form.get('min_confidence', DEFAULT_MIN_CONFIDENCE))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'min_confidence must be numeric'}), 400
+
+    db = SessionLocal()
+    try:
+        result = ingest_drive_upload_scan_and_import(
+            db,
+            file_bytes=file.read(),
+            filename=file.filename,
+            folder_url_or_id=folder_url,
+            min_confidence=min_confidence,
+        )
+        return jsonify({'success': True, 'result': result}), 200
+    except GoogleDriveIntegrationError as exc:
+        db.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception as exc:
+        db.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        db.close()
+
+
 @app.route('/api/dashboard/stats')
 def api_dashboard_stats():
     """Get dashboard statistics"""
@@ -320,6 +371,7 @@ def api_ebay_health():
     """Return eBay integration readiness and token validation status."""
     from config import Config
 
+    attempt_opt_in = request.args.get('opt_in', '').strip().lower() in {'1', 'true', 'yes'}
     configured = bool(Config.EBAY_APP_ID and Config.EBAY_DEV_ID)
     token_configured = bool(Config.EBAY_USER_TOKEN or Config.EBAY_REFRESH_TOKEN)
 
@@ -334,6 +386,10 @@ def api_ebay_health():
         'auth_status_code': None,
         'inventory_model_ready': False,
         'inventory_model_reason': None,
+        'opt_in_attempted': False,
+        'opt_in_result': None,
+        'detected_policy_ids': None,
+        'detected_locations': None,
     }
 
     if configured and token_configured:
@@ -341,15 +397,55 @@ def api_ebay_health():
         result['token_ok'] = api.validate_rest_access()
         result['auth_mode'] = getattr(api, '_auth_mode', None)
         result['auth_status_code'] = getattr(api, '_last_auth_status', None)
+        if attempt_opt_in:
+            result['opt_in_attempted'] = True
+            try:
+                result['opt_in_result'] = api.opt_in_to_program()
+            except EbayAPIError as exc:
+                result['opt_in_result'] = {'error': str(exc)}
+        try:
+            result['detected_policy_ids'] = api.list_policy_ids()
+        except EbayAPIError as exc:
+            result['detected_policy_ids'] = {'error': str(exc)}
+        try:
+            result['detected_locations'] = api.list_locations()
+        except EbayAPIError as exc:
+            result['detected_locations'] = {'error': str(exc)}
         if result['token_ok']:
             try:
-                api.resolve_listing_policies()
-                api.resolve_location_key()
+                api.ensure_business_policies()
+                api.ensure_location_key()
                 result['inventory_model_ready'] = True
             except EbayAPIError as exc:
                 result['inventory_model_reason'] = str(exc)
 
     return jsonify(result)
+
+
+@app.route('/api/ebay/opt-in', methods=['POST'])
+def api_ebay_opt_in():
+    """Forward account opt-in requests to eBay Sell Account program endpoint."""
+    payload = request.get_json(silent=True) or {}
+    db_safe_payload = payload if isinstance(payload, dict) else {}
+
+    api = eBayAPI()
+    if not api.get_access_token():
+        return jsonify({'success': False, 'error': 'eBay auth failed. Verify EBAY credentials.'}), 502
+
+    try:
+        response = api.opt_in_to_program(db_safe_payload or None)
+        return jsonify({'success': True, 'result': response}), 200
+    except EbayAPIError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 502
+
+
+@app.route('/api/ebay/bootstrap', methods=['POST'])
+def api_ebay_bootstrap():
+    """Attempt end-to-end eBay inventory readiness bootstrap and return a detailed report."""
+    api = eBayAPI()
+    report = api.bootstrap_inventory_readiness()
+    success = bool(report.get('token_ok') and report.get('rest_access_ok') and report.get('resolved_policy_ids') and report.get('location_key'))
+    return jsonify({'success': success, 'report': report}), (200 if success else 207)
 
 
 @app.route('/api/ebay/cards')
@@ -385,8 +481,11 @@ def api_ebay_cards():
         db.close()
 
 
-def _build_ebay_sku(card) -> str:
-    return f'mtg-card-{card.id}'
+def _build_ebay_sku(card, suffix: str | None = None) -> str:
+    base = f'mtg-card-{card.id}'
+    if suffix:
+        return f'{base}-{suffix}'
+    return base
 
 
 def _resolve_listing_price(card, payload):
@@ -446,7 +545,9 @@ def api_create_ebay_listing():
         condition = payload.get('condition') or card.condition or 'NM'
         price, verified_snapshot = _resolve_listing_price(card, payload)
         description = payload.get('description') or _build_listing_description(card, verified_snapshot, condition)
-        sku = _build_ebay_sku(card)
+        force_new_offer = bool(payload.get('force_new_offer'))
+        sku_suffix = str(int(time.time())) if force_new_offer else None
+        sku = _build_ebay_sku(card, sku_suffix)
 
         inventory_payload = ebay_api.build_inventory_item_payload(
             card=card,
@@ -457,7 +558,7 @@ def api_create_ebay_listing():
         )
         ebay_api.upsert_inventory_item(sku=sku, payload=inventory_payload)
 
-        existing_offer = ebay_api.get_offer_by_sku(sku)
+        existing_offer = None if force_new_offer else ebay_api.get_offer_by_sku(sku)
         offer_id = (existing_offer or {}).get('offerId')
         if offer_id:
             ebay_api.update_offer(
@@ -818,7 +919,8 @@ def api_system_status():
         db_connected = True
         try:
             db.query(Card).count()
-        except:
+        except SQLAlchemyError as exc:
+            logger.exception("Database health check failed: %s", exc)
             db_connected = False
         
         # eBay check

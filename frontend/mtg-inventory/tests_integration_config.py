@@ -9,6 +9,7 @@ import os
 import vcr
 import pytest
 from pathlib import Path
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database import Base
@@ -22,11 +23,10 @@ CASSETTES_DIR.mkdir(parents=True, exist_ok=True)
 
 def _scrub_request(request):
     """Remove sensitive data from recorded requests"""
-    # Remove API keys from query strings
-    if 'key=' in request.uri:
-        request.uri = request.uri.split('&key=')[0]
-    if 'secret=' in request.uri:
-        request.uri = request.uri.split('&secret=')[0]
+    # Remove API keys from query strings while preserving other parameters.
+    parsed = urlparse(request.uri)
+    safe_pairs = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k not in {"key", "secret"}]
+    request.uri = urlunparse(parsed._replace(query=urlencode(safe_pairs, doseq=True)))
     
     # Remove auth headers
     if 'Authorization' in request.headers:
@@ -61,7 +61,7 @@ test_vcr = vcr.VCR(
     
     # Other options
     decode_compressed_response=True,
-    filter_headers=['Authorization', 'Authorization', 'X-API-Key'],
+    filter_headers=['Authorization', 'X-API-Key'],
 )
 
 

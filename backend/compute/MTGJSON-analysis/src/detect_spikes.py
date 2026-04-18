@@ -99,10 +99,15 @@ def extract_ck_prices(data, target_date=None):
         if target_date:
             if target_date not in normal:
                 continue
-            latest_cash = float(normal[target_date])
+            raw_cash = normal[target_date]
         else:
             latest_date = max(normal.keys())
-            latest_cash = float(normal[latest_date])
+            raw_cash = normal[latest_date]
+
+        try:
+            latest_cash = float(raw_cash)
+        except (TypeError, ValueError):
+            continue
         
         if latest_cash >= CONFIG["min_buylist_price"]:
             foil = bl.get("foil", {})
@@ -306,6 +311,10 @@ def main():
     
     print("[3] Analyzing available dates...")
     available_dates = get_available_dates(prices_data)
+    if not available_dates:
+        print("    ERROR: No price dates found in dataset")
+        conn.close()
+        return
     print(f"    Found {len(available_dates)} dates: {available_dates[0]} to {available_dates[-1]}")
     
     # Latest date is the comparison date

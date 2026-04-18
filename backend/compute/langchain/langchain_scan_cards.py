@@ -3,10 +3,10 @@
 Scan MTG card images using LangChain + Ollama vision (qwen3-vl:8b) and export to CSV.
 
 Usage:
-    python ollama_scan_cards.py                           # defaults: cropped v5 folder
-    python ollama_scan_cards.py --input-dir ./my_images
-    python ollama_scan_cards.py --output-csv my_results.csv --resume
-    python ollama_scan_cards.py --limit 10                # quick test run
+    python langchain_scan_cards.py                           # defaults: cropped v5 folder
+    python langchain_scan_cards.py --input-dir ./my_images
+    python langchain_scan_cards.py --output-csv my_results.csv --resume
+    python langchain_scan_cards.py --limit 10                # quick test run
 """
 from __future__ import annotations
 
@@ -241,14 +241,19 @@ def identify_card(image_path: Path, llm: ChatOllama, fallback_llm: ChatOllama, d
 def load_progress(progress_path: Path) -> set:
     """Load set of already-scanned filenames."""
     if progress_path.exists():
-        with open(progress_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return set(data.get("scanned", []))
+        try:
+            with open(progress_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return set(data.get("scanned", []))
+        except (json.JSONDecodeError, ValueError) as exc:
+            print(f"[!] Corrupted progress file at {progress_path}: {exc}. Starting fresh.")
+            return set()
     return set()
 
 
 def save_progress(progress_path: Path, scanned: set):
     """Persist scanned filenames for resume."""
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
     with open(progress_path, "w", encoding="utf-8") as f:
         json.dump({"scanned": sorted(scanned), "updated": datetime.now().isoformat()}, f)
 

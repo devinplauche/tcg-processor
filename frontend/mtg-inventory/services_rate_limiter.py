@@ -51,18 +51,17 @@ class RateLimiter:
         with self.lock:
             elapsed = time.time() - self.last_call_time
             sleep_time = max(0, self.min_interval - elapsed)
-            
+
+        if sleep_time > 0:
+            logger.debug(f"{self.name}: Rate limit sleep for {sleep_time:.3f}s")
+            time.sleep(sleep_time)
+
+        with self.lock:
             if sleep_time > 0:
-                logger.debug(
-                    f"{self.name}: Rate limit sleep for {sleep_time:.3f}s"
-                )
-                time.sleep(sleep_time)
                 self.stats['total_waits'] += 1
                 self.stats['total_wait_time'] += sleep_time
-            
             self.last_call_time = time.time()
             self.stats['total_calls'] += 1
-            
             return sleep_time
     
     def reset(self):
@@ -126,6 +125,7 @@ class CircuitBreaker:
         self.failure_count = 0
         self.last_failure_time: Optional[datetime] = None
         self.lock = threading.RLock()
+        self._half_open_probe_in_flight = False
     
     def is_available(self) -> bool:
         """Check if service is available (circuit is not OPEN)"""
@@ -138,11 +138,17 @@ class CircuitBreaker:
                 if elapsed >= self.recovery_timeout:
                     self.state = self.HALF_OPEN
                     self.failure_count = 0
+                    self._half_open_probe_in_flight = False
                     logger.info(f"{self.name}: Circuit entering HALF_OPEN state")
-                    return True
-                return False
-            
-            # HALF_OPEN: allow one request to test
+                else:
+                    return False
+
+            if self.state == self.HALF_OPEN:
+                if self._half_open_probe_in_flight:
+                    return False
+                self._half_open_probe_in_flight = True
+                return True
+
             return True
     
     def record_success(self):
@@ -151,6 +157,7 @@ class CircuitBreaker:
             self.failure_count = 0
             if self.state == self.HALF_OPEN:
                 self.state = self.CLOSED
+                self._half_open_probe_in_flight = False
                 logger.info(f"{self.name}: Circuit recovered to CLOSED state")
     
     def record_failure(self):
@@ -158,6 +165,8 @@ class CircuitBreaker:
         with self.lock:
             self.failure_count += 1
             self.last_failure_time = datetime.now()
+            if self.state == self.HALF_OPEN:
+                self._half_open_probe_in_flight = False
             
             if self.failure_count >= self.failure_threshold:
                 if self.state != self.OPEN:
@@ -173,6 +182,7 @@ class CircuitBreaker:
             self.state = self.CLOSED
             self.failure_count = 0
             self.last_failure_time = None
+            self._half_open_probe_in_flight = False
     
     def get_state(self) -> dict:
         """Get current circuit breaker state"""

@@ -1,10 +1,15 @@
 import json
 
+HALF_PAYOUT = 0.5
+
 # Check for TCGPlayer prices in AllPricesToday.json
-with open('AllPricesToday.json', 'r') as f:
+with open('AllPricesToday.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 prices_data = data.get('data', {})
+if not prices_data:
+    print("No price data found in AllPricesToday.json (data is empty).")
+    raise SystemExit(1)
 
 # Sample a card and check all available price sources
 sample_uuid = list(prices_data.keys())[0]
@@ -66,8 +71,18 @@ print("Looking for Arbitrage: Retail < Card Kingdom Buylist (Half Payout)")
 print("="*80)
 
 arbitrage_opps = []
-latest_date = max([d for card in prices_data.values() 
-                   for d in card.get('paper', {}).get('cardkingdom', {}).get('buylist', {}).get('normal', {}).keys()])
+latest_date = max(
+    (
+        d
+        for card in prices_data.values()
+        for d in card.get('paper', {}).get('cardkingdom', {}).get('buylist', {}).get('normal', {}).keys()
+    ),
+    default=None,
+)
+
+if latest_date is None:
+    print("No Card Kingdom buylist dates found; cannot compute arbitrage opportunities.")
+    raise SystemExit(1)
 
 print(f"Using latest date: {latest_date}")
 print("Note: CK buylist values are halved to account for potential payment reduction\n")
@@ -83,10 +98,10 @@ for uuid, card in prices_data.items():
     # Use latest date if available, otherwise use max available
     ck_price = None
     if latest_date in ck_bl:
-        ck_price = float(ck_bl[latest_date]) * 0.5  # Half the payout
+        ck_price = float(ck_bl[latest_date]) * HALF_PAYOUT
     else:
         ck_date = max([d for d in ck_bl.keys()])
-        ck_price = float(ck_bl[ck_date]) * 0.5  # Half the payout
+        ck_price = float(ck_bl[ck_date]) * HALF_PAYOUT
     
     # Collect all available retail prices from all sources
     retail_prices = {}

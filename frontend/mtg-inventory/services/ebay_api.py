@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional
 
@@ -171,6 +173,243 @@ class eBayAPI:
             self._last_auth_status = None
             return False
 
+    def list_locations(self) -> list[dict[str, Any]]:
+        response = self._request("GET", "/sell/inventory/v1/location", expected_statuses=(200,))
+        return (response.json() or {}).get("locations", []) or []
+
+    def create_location(self, *, merchant_location_key: str, payload: dict[str, Any]) -> None:
+        self._request(
+            "POST",
+            f"/sell/inventory/v1/location/{merchant_location_key}",
+            payload=payload,
+            expected_statuses=(200, 201, 204),
+            include_language=True,
+        )
+
+    def _bootstrap_location_payload(self) -> dict[str, Any]:
+        street_1 = os.getenv("EBAY_LOCATION_STREET1", "123 Main St")
+        city = os.getenv("EBAY_LOCATION_CITY", "San Jose")
+        state = os.getenv("EBAY_LOCATION_STATE", "CA")
+        postal = os.getenv("EBAY_LOCATION_POSTAL_CODE", "95125")
+        country = os.getenv("EBAY_LOCATION_COUNTRY", "US")
+        phone = os.getenv("EBAY_LOCATION_PHONE", "4081234567")
+        name = os.getenv("EBAY_LOCATION_NAME", "Default Inventory Location")
+
+        return {
+            "name": name,
+            "merchantLocationStatus": "ENABLED",
+            "location": {
+                "address": {
+                    "addressLine1": street_1,
+                    "city": city,
+                    "stateOrProvince": state,
+                    "postalCode": postal,
+                    "country": country,
+                }
+            },
+            "locationTypes": ["WAREHOUSE"],
+            "phone": phone,
+        }
+
+    def ensure_location_key(self) -> str:
+        """Resolve a usable inventory location, optionally creating one from env defaults."""
+        try:
+            return self.resolve_location_key()
+        except EbayAPIError:
+            auto_create = os.getenv("EBAY_AUTO_CREATE_LOCATION", "false").lower() in ("1", "true", "yes", "t")
+            if not auto_create:
+                raise
+
+            merchant_location_key = os.getenv("EBAY_MERCHANT_LOCATION_KEY", "mtg-inventory-default")
+            payload = self._bootstrap_location_payload()
+            self.create_location(merchant_location_key=merchant_location_key, payload=payload)
+
+            self._location_cache = None
+            return self.resolve_location_key()
+
+    def list_policy_ids(self) -> dict[str, list[str]]:
+        endpoints = {
+            "paymentPolicyId": ("/sell/account/v1/payment_policy", "paymentPolicies", "paymentPolicyId"),
+            "fulfillmentPolicyId": (
+                "/sell/account/v1/fulfillment_policy",
+                "fulfillmentPolicies",
+                "fulfillmentPolicyId",
+            ),
+            "returnPolicyId": ("/sell/account/v1/return_policy", "returnPolicies", "returnPolicyId"),
+        }
+        output: dict[str, list[str]] = {
+            "paymentPolicyId": [],
+            "fulfillmentPolicyId": [],
+            "returnPolicyId": [],
+        }
+        for key, (path, collection_key, id_key) in endpoints.items():
+            response = self._request(
+                "GET",
+                path,
+                params={"marketplace_id": self.marketplace_id},
+                expected_statuses=(200,),
+            )
+            collection = (response.json() or {}).get(collection_key) or []
+            output[key] = [str(item.get(id_key)) for item in collection if item.get(id_key)]
+        return output
+
+    def _business_policy_category_type(self) -> str:
+        return os.getenv("EBAY_POLICY_CATEGORY_TYPE", "ALL_EXCLUDING_MOTORS_VEHICLES")
+
+    def create_default_payment_policy(self) -> dict[str, Any]:
+        base_payload = {
+            "name": os.getenv("EBAY_PAYMENT_POLICY_NAME", "MTG Payment Policy"),
+            "description": "Auto-created payment policy for MTG inventory",
+            "marketplaceId": self.marketplace_id,
+            "categoryTypes": [{"name": self._business_policy_category_type()}],
+            "immediatePay": False,
+        }
+        variants = [
+            {**base_payload, "paymentMethods": [{"paymentMethodType": "PAYPAL"}]},
+            {**base_payload, "paymentMethods": [{"paymentMethodType": "CREDIT_CARD"}]},
+            base_payload,
+        ]
+
+        last_error: Optional[Exception] = None
+        for payload in variants:
+            try:
+                response = self._request(
+                    "POST",
+                    "/sell/account/v1/payment_policy",
+                    payload=payload,
+                    expected_statuses=(200, 201),
+                    include_language=True,
+                )
+                return response.json() or {}
+            except Exception as exc:
+                last_error = exc
+
+        if last_error:
+            raise last_error
+        raise EbayAPIError("Unable to create payment policy")
+
+    def create_default_fulfillment_policy(self) -> dict[str, Any]:
+        payload = {
+            "name": os.getenv("EBAY_FULFILLMENT_POLICY_NAME", "MTG Fulfillment Policy"),
+            "description": "Auto-created fulfillment policy for MTG inventory",
+            "marketplaceId": self.marketplace_id,
+            "categoryTypes": [{"name": self._business_policy_category_type()}],
+            "handlingTime": {"unit": "DAY", "value": int(os.getenv("EBAY_POLICY_HANDLING_DAYS", "3"))},
+            "shippingOptions": [
+                {
+                    "optionType": "DOMESTIC",
+                    "costType": "FLAT_RATE",
+                    "shippingServices": [
+                        {
+                            "shippingCarrierCode": os.getenv("EBAY_POLICY_SHIPPING_CARRIER", "USPS"),
+                            "shippingServiceCode": os.getenv("EBAY_POLICY_SHIPPING_SERVICE", "USPSFirstClass"),
+                            "shippingCost": {"currency": self.currency, "value": os.getenv("EBAY_POLICY_SHIPPING_COST", "0.00")},
+                        }
+                    ],
+                }
+            ],
+        }
+        response = self._request(
+            "POST",
+            "/sell/account/v1/fulfillment_policy",
+            payload=payload,
+            expected_statuses=(200, 201),
+            include_language=True,
+        )
+        return response.json() or {}
+
+    def create_default_return_policy(self) -> dict[str, Any]:
+        days = int(os.getenv("EBAY_POLICY_RETURN_DAYS", "30"))
+        payload = {
+            "name": os.getenv("EBAY_RETURN_POLICY_NAME", "MTG Return Policy"),
+            "description": "Auto-created return policy for MTG inventory",
+            "marketplaceId": self.marketplace_id,
+            "categoryTypes": [{"name": self._business_policy_category_type()}],
+            "returnsAccepted": True,
+            "returnPeriod": {"value": days, "unit": "DAY"},
+            "refundMethod": "MONEY_BACK",
+            "returnShippingCostPayer": os.getenv("EBAY_POLICY_RETURN_PAYER", "BUYER"),
+        }
+        response = self._request(
+            "POST",
+            "/sell/account/v1/return_policy",
+            payload=payload,
+            expected_statuses=(200, 201),
+            include_language=True,
+        )
+        return response.json() or {}
+
+    def ensure_business_policies(self) -> dict[str, str]:
+        try:
+            return self.resolve_listing_policies()
+        except EbayAPIError:
+            auto_create = os.getenv("EBAY_AUTO_CREATE_POLICIES", "false").lower() in ("1", "true", "yes", "t")
+            if not auto_create:
+                raise
+
+            # Best effort creation; re-resolve to produce authoritative IDs.
+            self.create_default_payment_policy()
+            self.create_default_fulfillment_policy()
+            self.create_default_return_policy()
+            self._policy_cache = None
+            return self.resolve_listing_policies()
+
+    def bootstrap_inventory_readiness(self) -> dict[str, Any]:
+        """Best-effort readiness flow: auth, opt-in, policies, and location."""
+        report: dict[str, Any] = {
+            "token_ok": False,
+            "rest_access_ok": False,
+            "opt_in": None,
+            "policy_ids_detected": None,
+            "resolved_policy_ids": None,
+            "location_key": None,
+            "errors": [],
+        }
+
+        report["token_ok"] = bool(self.get_access_token())
+        if not report["token_ok"]:
+            report["errors"].append("Unable to acquire eBay access token")
+            return report
+
+        report["rest_access_ok"] = self.validate_rest_access()
+
+        try:
+            report["opt_in"] = self.opt_in_to_program()
+        except Exception as exc:
+            report["opt_in"] = {"error": str(exc)}
+
+        try:
+            report["policy_ids_detected"] = self.list_policy_ids()
+        except Exception as exc:
+            report["errors"].append(f"Policy discovery failed: {exc}")
+
+        try:
+            report["resolved_policy_ids"] = self.ensure_business_policies()
+        except Exception as exc:
+            report["errors"].append(f"Policy resolution failed: {exc}")
+
+        try:
+            report["location_key"] = self.ensure_location_key()
+        except Exception as exc:
+            report["errors"].append(f"Location resolution failed: {exc}")
+
+        return report
+
+    def opt_in_to_program(self, payload: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """Call Sell Account opt-in endpoint for marketplace program enrollment."""
+        request_payload = payload or {
+            "programType": os.getenv("EBAY_OPT_IN_PROGRAM_TYPE", "SELLING_POLICY_MANAGEMENT")
+        }
+        response = self._request(
+            "POST",
+            "/sell/account/v1/program/opt_in",
+            payload=request_payload,
+            expected_statuses=(200, 201, 204),
+        )
+        if response.status_code == 204:
+            return {"status": "ok", "program": request_payload}
+        return response.json() or {"status": "ok", "program": request_payload}
+
     def resolve_location_key(self) -> str:
         if self._location_cache:
             return self._location_cache
@@ -236,10 +475,29 @@ class eBayAPI:
                     expected_statuses=(200,),
                 )
             except EbayAPIError as exc:
-                raise EbayAPIError(
-                    "This sandbox account is not eligible for eBay business policies. "
-                    "Configure policy IDs explicitly or switch to an inventory-enabled sandbox seller account."
-                ) from exc
+                # Attempt one-time opt-in recovery for sandbox accounts that need explicit enrollment.
+                # This follows eBay Sell Account guidance around program/opt_in prior to policy usage.
+                if os.getenv("EBAY_AUTO_OPT_IN", "false").lower() in ("true", "1", "t", "yes"):
+                    try:
+                        self.opt_in_to_program()
+                        response = self._request(
+                            "GET",
+                            path,
+                            params={"marketplace_id": self.marketplace_id},
+                            expected_statuses=(200,),
+                        )
+                    except Exception:
+                        raise EbayAPIError(
+                            "This sandbox account is not eligible for eBay business policies. "
+                            "Configure policy IDs explicitly, opt in via /sell/account/v1/program/opt_in, "
+                            "or switch to an inventory-enabled sandbox seller account."
+                        ) from exc
+                else:
+                    raise EbayAPIError(
+                        "This sandbox account is not eligible for eBay business policies. "
+                        "Configure policy IDs explicitly, opt in via /sell/account/v1/program/opt_in, "
+                        "or switch to an inventory-enabled sandbox seller account."
+                    ) from exc
             collection = (response.json() or {}).get(collection_key) or []
             policy_ids[config_key] = next((item.get(id_key) for item in collection if item.get(id_key)), None)
 
@@ -387,8 +645,8 @@ class eBayAPI:
         quantity: int,
         description: str,
     ) -> str:
-        policies = self.resolve_listing_policies()
-        location_key = self.resolve_location_key()
+        policies = self.ensure_business_policies()
+        location_key = self.ensure_location_key()
         payload = {
             "sku": sku,
             "marketplaceId": self.marketplace_id,
@@ -468,19 +726,50 @@ class eBayAPI:
         return self.get_offer(offer_id)
 
     def publish_offer(self, offer_id: str) -> EbayListingState:
-        response = self._request(
-            "POST",
-            f"/sell/inventory/v1/offer/{offer_id}/publish",
-            expected_statuses=(200,),
+        retries = int(os.getenv("EBAY_PUBLISH_RETRIES", "3"))
+        delay_seconds = float(os.getenv("EBAY_PUBLISH_RETRY_DELAY_SECONDS", "2"))
+        transient_markers = (
+            "system error",
+            "please try again later",
+            "internal error",
+            "temporarily unavailable",
         )
-        payload = response.json() or {}
-        return EbayListingState(
-            sku=payload.get("sku") or "",
-            offer_id=payload.get("offerId") or offer_id,
-            listing_id=payload.get("listingId"),
-            status="PUBLISHED",
-            marketplace_id=self.marketplace_id,
-        )
+
+        last_error: Optional[Exception] = None
+        for attempt in range(retries):
+            try:
+                response = self._request(
+                    "POST",
+                    f"/sell/inventory/v1/offer/{offer_id}/publish",
+                    expected_statuses=(200,),
+                )
+                payload = response.json() or {}
+                return EbayListingState(
+                    sku=payload.get("sku") or "",
+                    offer_id=payload.get("offerId") or offer_id,
+                    listing_id=payload.get("listingId"),
+                    status="PUBLISHED",
+                    marketplace_id=self.marketplace_id,
+                )
+            except EbayAPIError as exc:
+                last_error = exc
+                message = str(exc).lower()
+                is_transient = any(marker in message for marker in transient_markers)
+                if is_transient and attempt < retries - 1:
+                    time.sleep(delay_seconds * (attempt + 1))
+                    continue
+                if is_transient:
+                    try:
+                        states = self.bulk_publish_offers([offer_id])
+                        if states:
+                            return states[0]
+                    except Exception:
+                        pass
+                raise
+
+        if last_error:
+            raise last_error
+        raise EbayAPIError("Unable to publish eBay offer")
 
     def bulk_publish_offers(self, offer_ids: list[str]) -> list[EbayListingState]:
         response = self._request(

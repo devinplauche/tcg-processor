@@ -82,6 +82,17 @@ async function loadBoxes() {
     const grid = document.getElementById('boxesGrid');
     try {
         const resp = await fetch('/api/boxes');
+        if (!resp.ok) {
+            let errorMessage = `Failed to load boxes (${resp.status})`;
+            try {
+                const payload = await resp.json();
+                errorMessage = payload.error || errorMessage;
+            } catch (parseErr) {
+                // Ignore parse failures and use generic message.
+            }
+            grid.innerHTML = `<div class="box-card empty">${errorMessage}</div>`;
+            return;
+        }
         const boxes = await resp.json();
 
         if (!Array.isArray(boxes) || boxes.length === 0) {

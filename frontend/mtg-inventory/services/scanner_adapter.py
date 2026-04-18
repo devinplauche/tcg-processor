@@ -45,9 +45,9 @@ def normalize_scanner_csv(df: pd.DataFrame) -> pd.DataFrame:
     4. Generate a deterministic synthetic ``scryfall_id`` from ``name + set_code``
        so that re-importing the same scan updates rather than duplicates.
     """
-    # 1. Filter to successful scans only
+    # 1. Filter to successful scans only; treat missing status as non-success.
     if "status" in df.columns:
-        df = df[df["status"].str.lower() == "success"].copy()
+        df = df[df["status"].str.lower().fillna("") == "success"].copy()
     else:
         df = df.copy()
 
@@ -75,11 +75,12 @@ def normalize_scanner_csv(df: pd.DataFrame) -> pd.DataFrame:
         if col not in df.columns:
             df[col] = default
 
-    # 4. Generate deterministic synthetic scryfall_id from name + set_code
+    # 4. Generate deterministic synthetic scryfall_id from name + set_code + collector_number
     def _synthetic_id(row: pd.Series) -> str:
         name = str(row.get("name", "")).strip().lower()
         set_code = str(row.get("set_code", "")).strip().lower()
-        key = f"{name}::{set_code}"
+        collector_number = str(row.get("collector_number", "")).strip().lower()
+        key = f"{name}::{set_code}::{collector_number}"
         return str(uuid.uuid5(_SYNTHETIC_ID_NAMESPACE, key))
 
     df["scryfall_id"] = df.apply(_synthetic_id, axis=1)

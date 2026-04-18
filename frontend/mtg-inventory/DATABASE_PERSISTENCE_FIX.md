@@ -56,7 +56,7 @@ os.chdir(app_dir)
 
 ### To Verify Persistence:
 ```bash
-cd C:\Users\devinsGamingPC\Coding\tcg-processor\mtg-inventory
+cd /path/to/project/mtg-inventory
 
 # Run the persistence test
 python test_db_persistence.py
@@ -76,7 +76,7 @@ The database is now **properly persisting** across app restarts. All data is saf
 
 ### Database Location
 ```
-C:\Users\devinsGamingPC\Coding\tcg-processor\mtg-inventory\mtg_inventory.db
+/path/to/project/mtg-inventory/mtg_inventory.db
 ```
 
 ### Current Data
@@ -90,7 +90,7 @@ C:\Users\devinsGamingPC\Coding\tcg-processor\mtg-inventory\mtg_inventory.db
 
 You can remove the empty database file created in the root directory:
 ```powershell
-Remove-Item "C:\Users\devinsGamingPC\Coding\tcg-processor\mtg_inventory.db"
+Remove-Item "$PROJECT_ROOT/mtg_inventory.db"
 ```
 
 This has no effect on the app since it now uses the absolute path to the correct file.
@@ -105,7 +105,7 @@ This has no effect on the app since it now uses the absolute path to the correct
 - Problems: Multiple DB files, data loss on wrong directory
 
 ### After Fix
-- Absolute path: `sqlite:///C:\Users\...\mtg-inventory\mtg_inventory.db`
+- Absolute path: `sqlite:///C:/path/to/mtg-inventory/mtg_inventory.db`
 - Location fixed regardless of `cwd`
 - Benefits: Consistent data access, no confusion about which DB is used
 

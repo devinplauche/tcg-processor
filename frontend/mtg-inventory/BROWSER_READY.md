@@ -1,6 +1,6 @@
 # ✅ Browser Testing - Ready to Go!
 
-**Status**: ✅ **LIVE** - Flask server is running on http://localhost:5000
+**Status**: ✅ **LIVE** - Flask server should be available at http://localhost:5000 when running
 
 ---
 
@@ -168,7 +168,7 @@ You'll see:
 ## 🐛 Troubleshooting
 
 ### "Flask server not responding"
-1. Check if terminal ID `0ddc7e6f-cc3a-46b6-a608-fbd54abfa27e` is still running
+1. Check if the terminal running Flask is still active
 2. If not, run `python app.py` again in mtg-inventory directory
 3. Wait 2-3 seconds for server to start
 4. Refresh browser (Ctrl+R or Cmd+R)
@@ -188,8 +188,7 @@ You'll see:
 Run this to reset the database:
 ```bash
 # In mtg-inventory directory
-rm mtg_inventory.db
-python -c "from database import init_db; init_db()"
+python -c "from pathlib import Path; Path('mtg_inventory.db').unlink(missing_ok=True); from database import init_db; init_db()"
 ```
 
 ---
@@ -329,6 +328,6 @@ If you encounter any issues:
 
 ---
 
-*Last updated: March 4, 2026*  
+*Last updated: April 18, 2026*  
 *Flask version: Latest*  
 *Database: SQLite (local)*

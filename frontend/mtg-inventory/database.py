@@ -1,24 +1,24 @@
 import os
 from sqlalchemy import text
+from sqlalchemy import inspect
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Get the database URL from environment or construct a default one
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# If DATABASE_URL uses relative path (sqlite:///), convert to absolute path
-if DATABASE_URL and "sqlite:///" in DATABASE_URL:
-    # Extract the relative path part (e.g., "mtg_inventory.db" from "sqlite:///mtg_inventory.db")
-    relative_path = DATABASE_URL.replace("sqlite:///", "")
-    # Get the directory where this database.py file is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Create absolute path to database file
-    absolute_db_path = os.path.join(current_dir, relative_path)
-    # Update DATABASE_URL to use absolute path
-    DATABASE_URL = f"sqlite:///{absolute_db_path}"
+# If DATABASE_URL uses a relative sqlite path, convert it to an absolute path.
+if DATABASE_URL and DATABASE_URL.startswith("sqlite:///"):
+    relative_path = DATABASE_URL[len("sqlite:///"):]
+    if not relative_path.startswith("/"):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        absolute_db_path = os.path.join(current_dir, relative_path)
+        DATABASE_URL = f"sqlite:///{absolute_db_path}"
 elif not DATABASE_URL:
     # Default: create database in the same directory as database.py
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +27,10 @@ elif not DATABASE_URL:
 
 print(f"[Database] Using: {DATABASE_URL}")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -43,8 +46,10 @@ def _ensure_cards_columns():
     }
     with engine.begin() as connection:
         try:
-            columns = {row[1] for row in connection.execute(text("PRAGMA table_info(cards)"))}
-        except Exception:
+            inspector = inspect(connection)
+            columns = {col["name"] for col in inspector.get_columns("cards")}
+        except Exception as exc:
+            logger.exception("Unable to inspect cards table columns: %s", exc)
             return
         for column_name, ddl in required_columns.items():
             if column_name not in columns:

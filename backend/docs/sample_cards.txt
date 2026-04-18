@@ -1,3 +1,7 @@
+# Sample MTG card names used for demos, quick scripts, and manual smoke checks.
+# Format constraints: one card name per line (UTF-8 text), no commas/trailing punctuation.
+# Maintenance: keep names valid/real and update this list when sample workflows change.
+# If uncertain about card validity, verify on Scryfall before adding/removing entries.
 Black Lotus
 Lightning Bolt
 Tarmogoyf
@@ -20,6 +24,6 @@ Mystical Tutor
 Sensei's Divining Top
 Emrakul, the Aeons Torn
 Griselbrand
-Stonewall Exile
+Swords to Plowshares
 Teferi, Time Raveler
 Wrenn and Six

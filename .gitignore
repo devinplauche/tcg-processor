@@ -31,5 +31,6 @@ backend/compute/MTGJSON-analysis/allidentifiers_cache.json.gz
 backend/compute/MTGJSON-analysis/allprices_cache.json.gz
 backend/compute/MTGJSON-analysis/src/AllPrices.json
 backend/compute/MTGJSON-analysis/src/mtg_prices.db
-*node_modules*
+**/node_modules/
+backend/compute/langchain/ollama_scan_progress.json
 

@@ -5,6 +5,28 @@ The workspace contains many files across various directories that make navigatio
 
 ## Proposed Directory Structure
 
+### 0. Root-Level Files and Shared Infrastructure
+Keep these at the repository root and treat them as shared project controls:
+- requirements.txt
+- pyproject.toml
+- setup.py
+- .env (local only; never commit secrets)
+- .gitignore
+- README.md
+
+Add a shared package for cross-project code:
+- shared/ (or common/) for utilities/models reused by mtg-inventory and arbitrage-engine
+
+Packaging guidance:
+- Each major Python code directory should be a package with __init__.py
+- This includes mtg-inventory, arbitrage-engine, MTGJSON-analysis, buylist-updater, and shared
+
+Deployment/CI artifacts should be discoverable at root (or a documented infra directory):
+- Dockerfile
+- docker-compose.yml
+- Kubernetes manifests (for example, k8s/)
+- .github/workflows/ (or .gitlab-ci.yml)
+
 ### 1. mtg-inventory/ - Main Inventory Management System
 This directory should contain:
 - Core application files (app.py, config.py, database.py, models.py)
@@ -60,6 +82,8 @@ This directory should contain:
 
 ## Implementation Steps
 
+- Before starting: create a full backup and/or ensure the workspace is committed to version control.
+
 1. **Create new directory structure**:
    - Create the 8 main directories listed above
    - Move relevant files to appropriate directories
@@ -77,8 +101,21 @@ This directory should contain:
    - Update import statements in code to reflect new paths
    - Update configuration files with new paths
    - Update any hardcoded paths
+   - During migration: make incremental commits per directory move and verify imports at each step
 
-4. **Cleanup**:
+4. **After moving files (step 3)**:
+   - Run the full test suite and linting
+   - Start the application and verify major endpoints still work
+
+5. **Validation**:
+   - Verify key features with smoke tests (import, search, sync, listing flows)
+   - Confirm package imports resolve cleanly from the new layout
+
+6. **Rollback plan**:
+   - If critical issues are found, restore from backup or reset to the last known-good commit
+   - Re-apply migration in smaller chunks with validation gates
+
+7. **Cleanup**:
    - Remove duplicate files
    - Remove unnecessary temporary files
    - Clean up the root directory

@@ -127,6 +127,12 @@ EBAY_SANDBOX_MODE=True
 GOOGLE_DRIVE_CREDENTIALS_JSON=/path/to/credentials.json
 ```
 
+Security guidance:
+- Ensure `.env` is ignored by git (never commit secrets).
+- Maintain a `.env.example` template with placeholders (for example `TCGPLAYER_API_KEY=`, `TCGPLAYER_API_SECRET=`, `EBAY_CLIENT_ID=`).
+- Copy `.env.example` to `.env` locally and fill real values only on trusted machines.
+- Never commit real credentials to source control or public repositories.
+
 ### Step 3: Test with Cassettes (No Real API Calls)
 
 ```bash

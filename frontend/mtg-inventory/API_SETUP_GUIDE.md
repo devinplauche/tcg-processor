@@ -98,7 +98,7 @@ Response:
 eBay uses OAuth 2.0 with **refresh tokens**. You'll need:
 - **Client ID** (from eBay Developer)
 - **Client Secret** (from eBay Developer)
-- **Refresh Token** (obtained once, expires annually)
+- **Refresh Token** (long-lived, typically expires after ~18 months unless revoked)
 
 ### Step 1: Create eBay Developer Account
 

@@ -26,14 +26,16 @@ Build a Magic: The Gathering card inventory management system for a collector wi
 - Parse and validate the following columns (ManaBox standard export format):
   `Name, Set Code, Set Name, Collector Number, Foil, Rarity, Quantity, ManaBox ID, Scryfall ID, Purchase Price, Condition, Language`
 - On import, for each card row:
-  - Check if `scryfall_id` already exists in the database
-  - If new: insert and auto-assign a location code (see Module 3)
-  - If existing: update quantity and condition only, never overwrite location
+  - Treat each physical copy as a separate row with its own location code
+  - Always insert a new row per physical card copy, even when `scryfall_id` already exists
+  - If metadata needs correction, update only that single physical-card row (never aggregate quantity)
+  - Quantity is always 1 per row in this chaos-sorting model
 - Show import summary: cards added, cards updated, cards skipped, errors
 
 ### Module 2: eBay Listing Sync
 - Use the eBay Selling API (Trading API or Inventory API) with OAuth2
-- Store eBay OAuth tokens securely in `.env` (never hardcode)
+- Keep only client ID/secret in `.env`; persist OAuth tokens in DB (`oauth_tokens` table)
+- On token refresh, atomically save returned `access_token`, `refresh_token` (if rotated), and `expires_at`
 - For each card in inventory marked `list_on_ebay = True`:
   - Check if an active eBay listing already exists (by stored `ebay_listing_id`)
   - If no listing: create a new fixed-price listing using card name, set, condition, foil status, and current TCGPlayer market price as the listing price
@@ -44,7 +46,10 @@ Build a Magic: The Gathering card inventory management system for a collector wi
 
 ### Module 3: TCGPlayer Sync
 - Use the TCGPlayer API (requires API key stored in `.env`)
-- Fetch current market price for each card using `scryfall_id` → TCGPlayer product ID mapping
+- During import/enrichment, call Scryfall per card and populate nullable `tcgplayer_product_id` from `tcgplayer_id`
+- If Scryfall does not provide `tcgplayer_id`, use fallback catalog search (`findTcgplayerIdByNameAndSet`)
+- Optionally provide enrichment endpoint (`POST /enrich/cards`) so sync jobs can backfill IDs before pricing
+- Fetch current market price using stored `tcgplayer_product_id` before calling TCGPlayer APIs
 - Store fetched prices in a `prices` table with a `fetched_at` timestamp
 - Never fetch prices more than once per 24 hours per card (check timestamp before calling API)
 - Expose a `/sync/prices` endpoint that updates stale prices in batches of 100
@@ -57,12 +62,14 @@ Location code format: `BOX-{box_number:04d}-SLOT-{slot_number:04d}`
 Example: `BOX-0012-SLOT-0047`
 
 - On first import of any card, auto-assign the next available slot in the current open box
+- Slot assignment must prefer rows with `status='vacant'` before opening a new box
 - Default box capacity: 500 cards (configurable in `config.py`)
 - When a box reaches capacity, automatically open the next box number
 - Generate a printable QR code for each box that links to `/box/{box_number}` — a mobile-friendly page listing all cards in that box
 - Provide a `/card/{scryfall_id}/location` endpoint returning the box and slot for a given card
 - Provide a `/box/{box_number}` page showing all cards in that box with name, set, condition, foil, and market price
-- Include a "Mark as Sold" button per card that clears the eBay listing ID and marks the slot as vacant
+- Include a "Mark as Sold" button per card that sets `status='sold'` and clears `ebay_listing_id`
+- Preserve location history (box/slot) when sold
 
 ---
 
@@ -80,8 +87,8 @@ cards (
   collector_number TEXT,
   foil BOOLEAN DEFAULT FALSE,
   rarity TEXT,
-  quantity INTEGER DEFAULT 1,
   condition TEXT,
+  status TEXT DEFAULT 'occupied',
   language TEXT DEFAULT 'en',
   purchase_price REAL,
   location_code TEXT,
@@ -91,6 +98,15 @@ cards (
   ebay_listing_id TEXT,
   tcgplayer_product_id TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+
+oauth_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider TEXT NOT NULL UNIQUE,
+  access_token TEXT,
+  refresh_token TEXT,
+  expires_at TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 
@@ -120,6 +136,13 @@ sync_log (
   errors INTEGER,
   run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
+
+-- Indexes
+CREATE INDEX idx_cards_box_number ON cards(box_number);
+CREATE INDEX idx_cards_scryfall_id ON cards(scryfall_id);
+CREATE INDEX idx_prices_scryfall_id ON prices(scryfall_id);
+CREATE INDEX idx_prices_fetched_at ON prices(fetched_at);
+CREATE INDEX idx_cards_ebay_listing_id_not_null ON cards(ebay_listing_id) WHERE ebay_listing_id IS NOT NULL;
 ```
 
 ---
