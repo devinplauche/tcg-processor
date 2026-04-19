@@ -30,7 +30,8 @@ def import_csv(db, file):
     # Remove rows with missing or empty scryfall_id before aggregation so
     # they are counted as skipped rather than inserted with an empty key.
     df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(1).astype(int)
-    missing_mask = df['scryfall_id'].isna() | (df['scryfall_id'].astype(str).str.strip() == '')
+    df['scryfall_id'] = df['scryfall_id'].fillna('').astype(str).str.strip().str.lower()
+    missing_mask = df['scryfall_id'] == ''
     skipped_count += int(missing_mask.sum())
     df = df[~missing_mask].copy()
 
@@ -43,10 +44,20 @@ def import_csv(db, file):
             .agg({**{col: 'first' for col in df.columns if col not in ('scryfall_id', 'quantity')}, 'quantity': 'sum'})
         )
 
+    existing_cards_by_scryfall_id = {}
+    if not df.empty:
+        existing_cards = (
+            db.query(Card)
+            .filter(Card.scryfall_id.in_(df['scryfall_id'].tolist()))
+            .all()
+        )
+        existing_cards_by_scryfall_id = {
+            str(card.scryfall_id).strip().lower(): card for card in existing_cards
+        }
+
     for _, row in df.iterrows():
         scryfall_id = row['scryfall_id']
-
-        card = db.query(Card).filter(Card.scryfall_id == scryfall_id).first()
+        card = existing_cards_by_scryfall_id.get(scryfall_id)
 
         if card:
             # Scanner imports: each row is a physical card seen → accumulate stock.
@@ -91,6 +102,8 @@ def import_csv(db, file):
             # Assign location
             assign_location(db, new_card)
             db.add(new_card)
+            db.flush()
+            existing_cards_by_scryfall_id[scryfall_id] = new_card
             added_count += 1
             status_by_scryfall_id[str(scryfall_id)] = 'added'
 

@@ -34,7 +34,7 @@ class Config:
     EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID") or os.getenv("EBAY_APP_ID")
     EBAY_APP_ID = os.getenv("EBAY_APP_ID") or EBAY_CLIENT_ID
     EBAY_DEV_ID = os.getenv("EBAY_DEV_ID")
-    EBAY_USER_TOKEN = os.getenv("EBAY_USER_TOKEN") or os.getenv("EBAY_REFRESH_TOKEN")
+    EBAY_USER_TOKEN = os.getenv("EBAY_USER_TOKEN")
     EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET")
     EBAY_REFRESH_TOKEN = os.getenv("EBAY_REFRESH_TOKEN")
     # os.getenv returns strings; treat "true", "1", and "t" (case-insensitive) as True.

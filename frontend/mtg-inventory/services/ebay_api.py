@@ -73,6 +73,34 @@ class eBayAPI:
             headers["Content-Language"] = self.content_language
         return headers
 
+    @staticmethod
+    def _correlation_ids(response: requests.Response) -> dict[str, str | None]:
+        return {
+            "x_ebay_c_request_id": response.headers.get("x-ebay-c-request-id"),
+            "rlogid": response.headers.get("rlogid"),
+        }
+
+    def _raw_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[dict[str, Any]] = None,
+        payload: Optional[dict[str, Any]] = None,
+        include_language: bool = False,
+    ) -> requests.Response:
+        if not self._access_token and not self.get_access_token():
+            raise EbayAPIError("Unable to authenticate with eBay.")
+
+        return requests.request(
+            method,
+            f"{self.base_url}{path}",
+            headers=self._headers(include_language=include_language),
+            params=params,
+            json=payload,
+            timeout=20,
+        )
+
     def _parse_error(self, response: requests.Response) -> str:
         try:
             payload = response.json()
@@ -101,20 +129,142 @@ class eBayAPI:
         expected_statuses: Iterable[int] = (200,),
         include_language: bool = False,
     ) -> requests.Response:
-        if not self._access_token and not self.get_access_token():
-            raise EbayAPIError("Unable to authenticate with eBay.")
-
-        response = requests.request(
+        response = self._raw_request(
             method,
-            f"{self.base_url}{path}",
-            headers=self._headers(include_language=include_language),
+            path,
             params=params,
-            json=payload,
-            timeout=20,
+            payload=payload,
+            include_language=include_language,
         )
         if response.status_code not in set(expected_statuses):
-            raise EbayAPIError(self._parse_error(response))
+            message = self._parse_error(response)
+            if response.status_code >= 500:
+                corr = self._correlation_ids(response)
+                message = (
+                    f"{message} (status={response.status_code}, "
+                    f"x-ebay-c-request-id={corr['x_ebay_c_request_id']}, rlogid={corr['rlogid']})"
+                )
+            raise EbayAPIError(message)
         return response
+
+    def _probe_endpoint(
+        self,
+        *,
+        key: str,
+        method: str,
+        path: str,
+        params: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
+        try:
+            response = self._raw_request(method, path, params=params)
+            return {
+                "name": key,
+                "ok": 200 <= response.status_code < 300,
+                "status": response.status_code,
+                "path": path,
+                "correlation": self._correlation_ids(response),
+            }
+        except Exception as exc:
+            return {
+                "name": key,
+                "ok": False,
+                "status": None,
+                "path": path,
+                "error": str(exc),
+            }
+
+    def diagnose_publish_offer(self, offer_id: str) -> dict[str, Any]:
+        """Collect publish prerequisites and API signal for sandbox 502 debugging."""
+        report: dict[str, Any] = {
+            "offer_id": offer_id,
+            "marketplace_id": self.marketplace_id,
+            "base_url": self.base_url,
+            "checks": {},
+            "summary": {},
+        }
+
+        offer_path = f"/sell/inventory/v1/offer/{offer_id}"
+        offer_response = self._raw_request("GET", offer_path)
+        report["checks"]["offer"] = {
+            "ok": offer_response.status_code == 200,
+            "status": offer_response.status_code,
+            "path": offer_path,
+            "correlation": self._correlation_ids(offer_response),
+        }
+
+        if offer_response.status_code != 200:
+            report["summary"] = {
+                "all_prereq_reads_ok": False,
+                "likely_sandbox_mutation_issue": False,
+                "note": "Offer read failed; publish prerequisites cannot be verified.",
+            }
+            return report
+
+        offer_payload = offer_response.json() or {}
+        sku = offer_payload.get("sku")
+        merchant_location_key = offer_payload.get("merchantLocationKey")
+        listing_policies = offer_payload.get("listingPolicies") or {}
+
+        report["summary"]["offer_snapshot"] = {
+            "sku": sku,
+            "merchantLocationKey": merchant_location_key,
+            "paymentPolicyId": listing_policies.get("paymentPolicyId"),
+            "fulfillmentPolicyId": listing_policies.get("fulfillmentPolicyId"),
+            "returnPolicyId": listing_policies.get("returnPolicyId"),
+        }
+
+        if sku:
+            report["checks"]["inventory_item"] = self._probe_endpoint(
+                key="inventory_item",
+                method="GET",
+                path=f"/sell/inventory/v1/inventory_item/{sku}",
+            )
+
+        if merchant_location_key:
+            report["checks"]["location"] = self._probe_endpoint(
+                key="location",
+                method="GET",
+                path=f"/sell/inventory/v1/location/{merchant_location_key}",
+            )
+
+        policy_paths = {
+            "payment_policy": ("/sell/account/v1/payment_policy", listing_policies.get("paymentPolicyId")),
+            "fulfillment_policy": (
+                "/sell/account/v1/fulfillment_policy",
+                listing_policies.get("fulfillmentPolicyId"),
+            ),
+            "return_policy": ("/sell/account/v1/return_policy", listing_policies.get("returnPolicyId")),
+        }
+        for key, (base_path, policy_id) in policy_paths.items():
+            if policy_id:
+                report["checks"][key] = self._probe_endpoint(
+                    key=key,
+                    method="GET",
+                    path=f"{base_path}/{policy_id}",
+                )
+            else:
+                report["checks"][key] = {
+                    "name": key,
+                    "ok": False,
+                    "status": None,
+                    "path": base_path,
+                    "error": "Missing policy id on offer",
+                }
+
+        check_values = [entry.get("ok", False) for entry in report["checks"].values()]
+        all_reads_ok = bool(check_values) and all(check_values)
+        report["summary"].update(
+            {
+                "all_prereq_reads_ok": all_reads_ok,
+                "likely_sandbox_mutation_issue": bool(Config.EBAY_SANDBOX_MODE and all_reads_ok),
+                "next_action": (
+                    "Collect x-ebay-c-request-id and rlogid from failing publish responses and open an eBay developer support ticket."
+                    if Config.EBAY_SANDBOX_MODE and all_reads_ok
+                    else "Fix failing prerequisite checks before retrying publish."
+                ),
+            }
+        )
+        return report
 
     def get_access_token(self) -> Optional[str]:
         """Resolve a usable sell token."""
@@ -154,6 +304,24 @@ class eBayAPI:
         self._access_token = result.get("access_token")
         self._auth_mode = "oauth_refresh"
         return self._access_token
+
+    def check_seller_registration(self) -> dict[str, Any]:
+        """Return privilege info including whether seller registration is complete."""
+        if not self._access_token and not self.get_access_token():
+            return {"ok": False, "sellerRegistrationCompleted": False, "error": "no_token"}
+        try:
+            response = requests.get(
+                f"{self.base_url}/sell/account/v1/privilege",
+                headers=self._headers(include_json=False),
+                timeout=20,
+            )
+            if response.status_code != 200:
+                return {"ok": False, "sellerRegistrationCompleted": False, "status": response.status_code}
+            data = response.json() or {}
+            registered = bool(data.get("sellerRegistrationCompleted", False))
+            return {"ok": True, "sellerRegistrationCompleted": registered, **data}
+        except requests.exceptions.RequestException as exc:
+            return {"ok": False, "sellerRegistrationCompleted": False, "error": str(exc)}
 
     def validate_rest_access(self) -> bool:
         """Check whether the current credentials can talk to Sell APIs."""
@@ -359,6 +527,7 @@ class eBayAPI:
         report: dict[str, Any] = {
             "token_ok": False,
             "rest_access_ok": False,
+            "seller_registration_completed": False,
             "opt_in": None,
             "policy_ids_detected": None,
             "resolved_policy_ids": None,
@@ -372,6 +541,26 @@ class eBayAPI:
             return report
 
         report["rest_access_ok"] = self.validate_rest_access()
+
+        privilege = self.check_seller_registration()
+        report["seller_registration_completed"] = privilege.get("sellerRegistrationCompleted", False)
+        if not report["seller_registration_completed"]:
+            msg = (
+                "Seller registration shows as incomplete (sellerRegistrationCompleted=false). "
+            )
+            if Config.EBAY_SANDBOX_MODE:
+                msg += (
+                    "This is a known eBay sandbox limitation — the sandbox does not support "
+                    "Managed Payments seller onboarding. Publishing may still work; "
+                    "the app will attempt it regardless."
+                )
+                report.setdefault("warnings", []).append(msg)
+            else:
+                msg += (
+                    "Publishing will fail until registration is finished. "
+                    "Log in at https://www.ebay.com and complete the seller onboarding flow."
+                )
+                report["errors"].append(msg)
 
         try:
             report["opt_in"] = self.opt_in_to_program()
@@ -408,7 +597,11 @@ class eBayAPI:
         )
         if response.status_code == 204:
             return {"status": "ok", "program": request_payload}
-        return response.json() or {"status": "ok", "program": request_payload}
+        try:
+            parsed = response.json()
+        except ValueError:
+            parsed = None
+        return parsed or {"status": "ok", "program": request_payload, "status_code": response.status_code}
 
     def resolve_location_key(self) -> str:
         if self._location_cache:
@@ -726,6 +919,27 @@ class eBayAPI:
         return self.get_offer(offer_id)
 
     def publish_offer(self, offer_id: str) -> EbayListingState:
+        # Pre-flight: check seller registration status.
+        # In sandbox mode, eBay may permanently report sellerRegistrationCompleted=false
+        # because the sandbox doesn't support the Managed Payments onboarding flow.
+        # We log a warning but still attempt the publish.
+        skip_check = os.getenv("EBAY_SKIP_REGISTRATION_CHECK", "").strip().lower() in ("true", "1", "t")
+        if not skip_check:
+            privilege = self.check_seller_registration()
+            if not privilege.get("sellerRegistrationCompleted"):
+                if not Config.EBAY_SANDBOX_MODE:
+                    # In production, this is a hard blocker.
+                    raise EbayAPIError(
+                        "Cannot publish: seller registration is not complete on this production account. "
+                        "Log in at https://www.ebay.com and complete the seller onboarding flow."
+                    )
+                # In sandbox, warn but proceed — the sandbox may not support seller registration.
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Sandbox seller registration is incomplete (sellerRegistrationCompleted=false). "
+                    "This is a known eBay sandbox limitation. Attempting publish anyway."
+                )
+
         retries = int(os.getenv("EBAY_PUBLISH_RETRIES", "3"))
         delay_seconds = float(os.getenv("EBAY_PUBLISH_RETRY_DELAY_SECONDS", "2"))
         transient_markers = (
@@ -742,6 +956,7 @@ class eBayAPI:
                     "POST",
                     f"/sell/inventory/v1/offer/{offer_id}/publish",
                     expected_statuses=(200,),
+                    include_language=True,
                 )
                 payload = response.json() or {}
                 return EbayListingState(
@@ -777,6 +992,7 @@ class eBayAPI:
             "/sell/inventory/v1/bulk_publish_offer",
             payload={"requests": [{"offerId": offer_id} for offer_id in offer_ids]},
             expected_statuses=(200,),
+            include_language=True,
         )
         states: list[EbayListingState] = []
         for item in (response.json() or {}).get("responses", []):

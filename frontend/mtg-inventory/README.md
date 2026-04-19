@@ -24,7 +24,7 @@ Set these in `.env.local`:
 
 Also set:
 
-- `LIVE_E2E_IMAGE_PATH` to a real card image file for live test execution
+- Live test image fixture is committed at `tests/integration/fixtures/live_e2e_card_image_from_drive.jpg`
 
 ### Run Live Test
 

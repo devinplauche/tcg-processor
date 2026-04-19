@@ -7,6 +7,7 @@ import threading
 import logging
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from database import init_db, SessionLocal
+from sqlalchemy import text
 from routes import inventory, ebay, tcgplayer, locations
 from sqlalchemy import desc, asc, func
 from sqlalchemy.exc import SQLAlchemyError
@@ -299,11 +300,23 @@ def api_get_box(box_id):
 @app.route('/api/health')
 def api_health():
     """Health check endpoint"""
-    return jsonify({
-        'status': 'ok',
-        'database': 'connected',
-        'version': '0.1.0'
-    })
+    db = SessionLocal()
+    try:
+        db.execute(text('SELECT 1'))
+        return jsonify({
+            'status': 'ok',
+            'database': 'connected',
+            'version': '0.1.0'
+        })
+    except SQLAlchemyError as exc:
+        logger.exception("Health check database probe failed: %s", exc)
+        return jsonify({
+            'status': 'degraded',
+            'database': 'disconnected',
+            'version': '0.1.0'
+        }), 503
+    finally:
+        db.close()
 
 
 @app.route('/api/integrations/google-drive/scan-import', methods=['POST'])
@@ -397,6 +410,14 @@ def api_ebay_health():
         result['token_ok'] = api.validate_rest_access()
         result['auth_mode'] = getattr(api, '_auth_mode', None)
         result['auth_status_code'] = getattr(api, '_last_auth_status', None)
+        privilege = api.check_seller_registration()
+        result['seller_registration_completed'] = privilege.get('sellerRegistrationCompleted', False)
+        if not result['seller_registration_completed'] and Config.EBAY_SANDBOX_MODE:
+            result['sandbox_registration_note'] = (
+                'sellerRegistrationCompleted=false is a known eBay sandbox limitation. '
+                'The sandbox does not support Managed Payments seller onboarding. '
+                'Publish attempts will proceed regardless.'
+            )
         if attempt_opt_in:
             result['opt_in_attempted'] = True
             try:
@@ -662,6 +683,7 @@ def api_publish_ebay_listing(card_id):
     from models import Card
 
     db = SessionLocal()
+    ebay_api = None
     try:
         card = db.query(Card).filter(Card.id == card_id).first()
         if not card:
@@ -688,7 +710,13 @@ def api_publish_ebay_listing(card_id):
         })
     except EbayAPIError as exc:
         db.rollback()
-        return jsonify({'success': False, 'error': str(exc)}), 502
+        diagnostics = None
+        if ebay_api and card and card.ebay_offer_id:
+            try:
+                diagnostics = ebay_api.diagnose_publish_offer(card.ebay_offer_id)
+            except Exception as diag_exc:
+                diagnostics = {'error': f'Failed to collect publish diagnostics: {diag_exc}'}
+        return jsonify({'success': False, 'error': str(exc), 'diagnostics': diagnostics}), 502
     finally:
         db.close()
 

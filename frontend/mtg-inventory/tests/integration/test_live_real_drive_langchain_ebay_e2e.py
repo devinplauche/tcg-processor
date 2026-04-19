@@ -18,15 +18,24 @@ from models import Card
 
 def _required_env_missing() -> list[str]:
     required = [
-        "LIVE_E2E_IMAGE_PATH",
         "GOOGLE_DRIVE_CREDENTIALS_JSON",
     ]
     missing = [key for key in required if not os.getenv(key)]
+
+    creds_path = os.getenv("GOOGLE_DRIVE_CREDENTIALS_JSON", "").strip()
+    if creds_path:
+        resolved = Path(creds_path).expanduser().resolve()
+        if not resolved.exists():
+            missing.append(f"GOOGLE_DRIVE_CREDENTIALS_JSON file missing: {resolved}")
 
     if not (Config.EBAY_USER_TOKEN or (Config.EBAY_CLIENT_ID and Config.EBAY_CLIENT_SECRET and Config.EBAY_REFRESH_TOKEN)):
         missing.append("EBAY auth credentials")
 
     return missing
+
+
+def _fixture_image_path() -> Path:
+    return (Path(__file__).resolve().parent / "fixtures" / "live_e2e_card_image_from_drive.jpg").resolve()
 
 
 @pytest.mark.integration
@@ -40,9 +49,9 @@ def test_live_drive_langchain_db_ebay_e2e_no_mocks():
     if not Config.EBAY_SANDBOX_MODE:
         pytest.skip("Refusing to run live listing test when EBAY_SANDBOX_MODE is not true")
 
-    image_path = Path(os.getenv("LIVE_E2E_IMAGE_PATH", "")).expanduser().resolve()
+    image_path = _fixture_image_path()
     if not image_path.exists():
-        pytest.skip(f"LIVE_E2E_IMAGE_PATH not found: {image_path}")
+        pytest.skip(f"Live E2E fixture image not found: {image_path}")
 
     min_confidence = os.getenv("LIVE_E2E_MIN_CONFIDENCE", "0.90")
     expected_card_name = os.getenv("LIVE_E2E_EXPECTED_CARD_NAME", "Erratic Visionary").strip()

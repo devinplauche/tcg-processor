@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import app as app_module
 from database import Base
 from models import Card
-from services.ebay_api import EbayListingState
+from services.ebay_api import EbayAPIError, EbayListingState
 
 
 @pytest.fixture
@@ -163,3 +163,39 @@ def test_bulk_publish_persists_listing_ids(ebay_test_client, monkeypatch):
     refreshed = db.query(Card).filter(Card.id.in_([card_one_id, card_two_id])).all()
     assert {card.ebay_listing_id for card in refreshed} == {"listing-1", "listing-2"}
     db.close()
+
+
+def test_publish_returns_diagnostics_on_publish_failure(ebay_test_client, monkeypatch):
+    client, SessionLocal = ebay_test_client
+    db = SessionLocal()
+    card = _create_card(db, name="Card Publish Failure")
+    card.ebay_offer_id = "offer-failing"
+    db.commit()
+    card_id = card.id
+    db.close()
+
+    api = SimpleNamespace(
+        get_access_token=lambda: "token",
+        publish_offer=lambda offer_id: (_ for _ in ()).throw(EbayAPIError("system error")),
+        diagnose_publish_offer=lambda offer_id: {
+            "offer_id": offer_id,
+            "summary": {
+                "all_prereq_reads_ok": True,
+                "likely_sandbox_mutation_issue": True,
+            },
+            "checks": {
+                "offer": {"ok": True, "status": 200},
+            },
+        },
+    )
+
+    monkeypatch.setattr(app_module, "eBayAPI", lambda: api)
+
+    response = client.post(f"/api/ebay/cards/{card_id}/publish")
+    payload = response.get_json()
+
+    assert response.status_code == 502
+    assert payload["success"] is False
+    assert "system error" in payload["error"].lower()
+    assert payload["diagnostics"]["offer_id"] == "offer-failing"
+    assert payload["diagnostics"]["summary"]["likely_sandbox_mutation_issue"] is True

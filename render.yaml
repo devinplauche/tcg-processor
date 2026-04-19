@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tcg-processor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: BASE_URL
+        sync: false
+      - key: BOX_CAPACITY
+        value: "500"
+      - key: MINIMAL_NEON_CARD_LIMIT
+        value: "25"

@@ -321,6 +321,23 @@ class TestImportCsvWithScannerFormat:
         card = db.query(Card).first()
         assert card.quantity == 2, "Second import must increment quantity, not replace it"
 
+    def test_reimport_missing_set_metadata_updates_existing_card(self, db):
+        """Scanner rows with blank set metadata should still update the existing card."""
+        csv_file = make_scanner_csv(
+            card_name=["Wall of Faith"],
+            set_name=[None],
+            set_code=[None],
+            rarity=[None],
+            status=["success"],
+        )
+        import_csv(db, csv_file)
+        csv_file.seek(0)
+        result = import_csv(db, csv_file)
+        cards = db.query(Card).all()
+        assert len(cards) == 1, "Repeated import must reuse the existing synthetic scryfall_id row"
+        assert cards[0].quantity == 2, "Repeated import must increment quantity for the matching card"
+        assert result["updated"] == 1
+
     def test_manabox_csv_still_works_unchanged(self, db):
         """Existing ManaBox import path must be unaffected."""
         csv_file = make_manabox_csv()
